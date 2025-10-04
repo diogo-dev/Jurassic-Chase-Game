@@ -1,25 +1,36 @@
 local Player = {}
 
 function Player.load(world, startX, startY)
-    local player = {}
-    player.width = 30
-    player.height = 50
-    player.collider = world:newBSGRectangleCollider(startX, startY, player.width, player.height, 10)
-    player.collider:setFixedRotation(true)
-    player.collider:setCollisionClass('Player')
-    player.x, player.y = player.collider:getPosition()
-    player.speed = 200
-    player.lives = 3
-    player.spriteSheet = love.graphics.newImage('sprites/player-sheet.png')
-    player.grid = anim8.newGrid(12, 18, player.spriteSheet:getWidth(), player.spriteSheet:getHeight())
+    local width, height = 30, 50
+    local collider = world:newBSGRectangleCollider(startX, startY, width, height, 10)
+    collider:setFixedRotation(true)
+    collider:setCollisionClass('Player')
+    local x, y = collider:getPosition()
+    local speed = 200
+    local lives = 3
+    local spriteSheet = love.graphics.newImage('sprites/player-sheet.png')
+    local grid = anim8.newGrid(12, 18, spriteSheet:getWidth(), spriteSheet:getHeight())
 
-    player.animations = {}
-    player.animations.down = anim8.newAnimation(player.grid('1-4', 1), 0.2)
-    player.animations.left = anim8.newAnimation(player.grid('1-4', 2), 0.2)
-    player.animations.right = anim8.newAnimation(player.grid('1-4', 3), 0.2)
-    player.animations.up = anim8.newAnimation(player.grid('1-4', 4), 0.2)
-    -- definindo a direção inicial do sprite (personagem olhando para baixo)
-    player.directionSprite = player.animations.down
+    local animations = {
+        down  = anim8.newAnimation(grid('1-4', 1), 0.2),
+        left  = anim8.newAnimation(grid('1-4', 2), 0.2),
+        right = anim8.newAnimation(grid('1-4', 3), 0.2),
+        up    = anim8.newAnimation(grid('1-4', 4), 0.2)
+    }
+
+    local player = {
+        width = width,
+        height = height,
+        collider = collider,
+        x = x,
+        y = y,
+        speed = speed,
+        lives = lives,
+        spriteSheet = spriteSheet,
+        grid = grid,
+        animations = animations,
+        directionSprite = animations.down
+    }
     
     return player
 end
