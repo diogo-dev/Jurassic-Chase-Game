@@ -8,13 +8,18 @@ udp:settimeout(0)
 print("Servidor da biblioteca rodando na porta 12345...")
 
 -- Configuração inicial do estado do jogo
-local gameState = {
-    total_diamonds = 108,
-    total_pink_diamonds = 7,
-    lives_number = 3,
-    player_position = {x = 524.8, y = 320},
-    player_speed = 200
-}
+local gameState = nil
+
+local function reset_game_state()
+    return {
+        current_screen = "menu",
+        total_diamonds = 108,
+        total_pink_diamonds = 7,
+        lives_number = 3,
+        player_position = {x = 524.8, y = 320},
+        player_speed = 200
+    }
+end
 
 local function diamondCollision(class)
     -- Quando acontecer a colisão com o diamente rosa, aumentar a velocidade do jogador
@@ -47,9 +52,13 @@ while true do
         local response = {}
 
         if data.action == "getInitialGameState" then
+            gameState = reset_game_state()
             response = {action = "initial_game", gameState = gameState}
         elseif data.action == "collect_diamond" then
             response = diamondCollision(data.collisionClass)
+        elseif data.action == "change_current_screen" then
+            gameState.current_screen = data.current_screen
+            response = { action = "change_current_screen", current_screen = gameState.current_screen }
         else
             response = { action = "unknownCommand", message = "Comando desconhecido." }
         end
