@@ -66,21 +66,15 @@ function Player.updateMovement(player)
         vx = player.speed
         player.directionSprite = player.animations.right
         isMoving = true
-    end
-
-    if love.keyboard.isDown("left") then
+    elseif love.keyboard.isDown("left") then
         vx = player.speed * -1
         player.directionSprite = player.animations.left
         isMoving = true
-    end
-
-    if love.keyboard.isDown("up") then
+    elseif love.keyboard.isDown("up") then
         vy = player.speed * -1
         player.directionSprite = player.animations.up
         isMoving = true
-    end
-
-    if love.keyboard.isDown("down") then
+    elseif love.keyboard.isDown("down") then
         vy = player.speed
         player.directionSprite = player.animations.down
         isMoving = true
