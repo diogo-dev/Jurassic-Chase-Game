@@ -132,6 +132,7 @@ function drawGame(game_map, player, world, gameState)
     -- Desenhando os colisores para melhor visualização
     --world:draw()
     
+    font = love.graphics.setNewFont(20)
     if gameState then
         love.graphics.setColor(1, 1, 1, 1) 
         love.graphics.print("Diamantes: " .. gameState.total_diamonds, 10, 10)

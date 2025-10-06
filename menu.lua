@@ -24,8 +24,9 @@ local function change_screen(screen, clientSocket)
 end
 
 function Buttons.load(clientSocket)
-
     font = love.graphics.setNewFont(32)
+    title_font = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 115)
+    backgroundImage = love.graphics.newImage("assets/background.jpg")
 
     table.insert(Buttons, new_button(
     "Começar jogo", 
@@ -52,6 +53,29 @@ function Buttons.draw()
   -- dimensões da janela
   local ww = love.graphics.getWidth()
   local wh = love.graphics.getHeight()
+  
+  -- desenha o fundo
+  if backgroundImage then
+    local scaleX = ww / backgroundImage:getWidth()
+    local scaleY = wh / backgroundImage:getHeight()
+    love.graphics.setColor(1, 1, 1, 0.7)
+    love.graphics.draw(backgroundImage, 0, 0, 0, scaleX, scaleY)
+  end
+
+  -- desenha o título
+  local title_text = "Jurassic Chase"
+  love.graphics.setFont(title_font)
+  love.graphics.setColor(0.55, 0.27, 0.07, 1)
+  local title_width = title_font:getWidth(title_text)
+  love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.5), wh * 0.15)
+
+  -- desenha o título
+  local title_text = "Jurassic Chase"
+  love.graphics.setFont(title_font)
+  love.graphics.setColor(1, 0.8, 0, 1)
+  local title_width = title_font:getWidth(title_text)
+  love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.51), wh * 0.155)
+
 
   -- largura dos botões
   local button_width = ww * (1/3)
