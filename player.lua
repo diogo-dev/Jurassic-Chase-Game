@@ -90,17 +90,3 @@ function Player.updateMovement(player)
 end
 
 return Player
-
-
-
--- fazendo o carregamento do dinossauro 1
-    -- dino1 = {}
-    -- dino1.x = 200
-    -- dino1.y = 200
-    -- dino1.speed = 5
-    -- dino1.spriteSheet = love.graphics.newImage('../sprites/dino/Dino1.png')
-    -- dino1.grid = anim8.newGrid(24, 24, dino1.spriteSheet:getWidth(), dino1.spriteSheet:getHeight())
-
-    -- dino1.animations = {}
-    -- dino1.animations.move = anim8.newAnimation(dino1.grid('4-10', 1), 0.08)
-    -- dino1.directionSprite = dino1.animations.move

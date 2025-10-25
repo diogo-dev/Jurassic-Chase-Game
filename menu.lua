@@ -8,7 +8,7 @@ function new_button(text, function_to_call)
     action = function_to_call,
     now = false,
     last = false
-  }
+  } 
 end
 
 local Buttons = {}

@@ -7,13 +7,12 @@ wf = require "libraries/windfield"
 local Player = require "player"
 local Collision = require "collision"
 local Menu = require "menu"
+local HowToPlay = require "how_to_play"
 
 -- importando bibliotecas para rede
 local socket = require "socket"
 local json = require "libraries/dkjson"
 local udp
-
-local menus = { 'Play', 'How To Play', 'Quit' }
 
 function love.load()
     -- configurando a rede
@@ -24,8 +23,9 @@ function love.load()
     local initialRequest = {action = "getInitialGameState"}
     udp:send(json.encode(initialRequest) .. "\n")
 
-    -- carregando o menu inicial
+    -- carregando as possíveis telas do jogo
     Menu.load(udp)
+    HowToPlay.load(udp)
 
     -- carregando o mapa
     game_map = sti('maps/testeMap.lua')
@@ -36,6 +36,7 @@ function love.load()
 
     -- classes de colisão
     world:addCollisionClass('Player')
+    world:addCollisionClass('Enemy')
     world:addCollisionClass('Diamond')
     world:addCollisionClass('PinkDiamond')
     world:addCollisionClass('Wall')
@@ -113,7 +114,7 @@ function love.draw()
     if gameState and gameState.current_screen == "menu" then
         Menu.draw()
     elseif gameState and gameState.current_screen == "how_to_play" then
-        love.graphics.print("Instruções de como jogar", mapWidth * 0.5, mapHeight * 0.5)
+        HowToPlay.draw()
     else
         drawGame(game_map, player, world, gameState)
     end
