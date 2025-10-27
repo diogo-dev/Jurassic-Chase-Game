@@ -1,13 +1,13 @@
 local Player = {}
 
-function Player.load(world, startX, startY)
+function Player.load(world, startX, startY, lives)
     local width, height = 30, 50
     local collider = world:newBSGRectangleCollider(startX, startY, width, height, 10)
     collider:setFixedRotation(true)
     collider:setCollisionClass('Player')
     local x, y = collider:getPosition()
     local speed = 200
-    local lives = 3
+    local current_lives = lives
     local spriteSheet = love.graphics.newImage('sprites/player-sheet.png')
     local grid = anim8.newGrid(12, 18, spriteSheet:getWidth(), spriteSheet:getHeight())
 
@@ -25,7 +25,7 @@ function Player.load(world, startX, startY)
         x = x,
         y = y,
         speed = speed,
-        lives = lives,
+        lives = current_lives,
         spriteSheet = spriteSheet,
         grid = grid,
         animations = animations,

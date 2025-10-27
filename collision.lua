@@ -1,4 +1,5 @@
 local json = require "libraries/dkjson"
+local Player = require "player"
 
 local Collision = {}
 
@@ -88,6 +89,44 @@ function Collision.handleDiamondCollision(player, collisionClass, layerName, dia
         end
 
     end
+end
+
+-- lembrar de mudar quando eu inserir a nova fase do jogo
+function Collision.handleEnemyPlayerCollision(player, clientSocket, world)
+
+    if not player or not player.collider then return end
+
+    if player.collider:enter('Enemy') then
+        
+        -- Avisa o servidor que houve colisão do player com um inimigo
+        -- pcall envia requisições de forma segura
+        local ok, err = pcall(function()
+            clientSocket:send(json.encode({action="enemy_collision"}) .. "\n")
+        end)
+        if not ok then
+            print("falha no envio:", err)
+        end
+
+        -- destrói o colisor atual para "retirar" o jogador do jogo
+        if player.collider and player.collider.destroy then
+            player.collider:destroy()
+        end
+
+        -- reinicia o jogador com o número atual de vida
+        if gameState and gameState.player_position then
+            local px = gameState.player_position.x
+            local py = gameState.player_position.y
+            local current_lives = gameState.lives_number
+
+            local new_player = Player.load(world, px, py, current_lives)
+            return new_player
+        end
+
+        -- depois colocar aqui um código de fallback (caso, o gameState seja nil, então reposicinar jogador manualmente)
+        
+    end
+
+    return player
 end
 
 return Collision

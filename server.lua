@@ -37,10 +37,18 @@ local function diamondCollision(class)
 end
 
 local function dinoCollision()
-    -- Quando acontecer a colisão com um inimigo (dinossauro):
-    -- Verificar se o jogador tem vidas restantes
-    -- Diminuir uma vida do jogador
-    -- Resetar a posição do jogador para a posição inicial
+    if gameState.lives_number == 1 then
+        gameState.lives_number = gameState.lives_number - 1
+        gameState.current_screen = "game_over"
+        response = { action = "game_over", gameState = gameState }
+    else
+        gameState.lives_number = gameState.lives_number - 1
+        gameState.player_position.x = 524.8
+        gameState.player_position.y = 320
+        response = { action = "enemy_collision", gameState = gameState }
+    end
+
+    return response
 end
 
 while true do
@@ -59,6 +67,8 @@ while true do
         elseif data.action == "change_current_screen" then
             gameState.current_screen = data.current_screen
             response = { action = "change_current_screen", current_screen = gameState.current_screen }
+        elseif data.action == "enemy_collision" then
+            response = dinoCollision()
         else
             response = { action = "unknownCommand", message = "Comando desconhecido." }
         end

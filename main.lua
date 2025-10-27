@@ -16,6 +16,8 @@ local json = require "libraries/dkjson"
 local udp
 
 function love.load()
+    gameState = nil
+
     -- configurando a rede
     udp = socket.udp()
     udp:settimeout(0)
@@ -27,6 +29,7 @@ function love.load()
     -- carregando as possíveis telas do jogo
     Menu.load(udp)
     HowToPlay.load(udp)
+    -- GameOver.load
 
     -- carregando o mapa
     game_map = sti('maps/testeMap.lua')
@@ -51,7 +54,7 @@ function love.load()
     -- use a big font for the menu
     local font = love.graphics.setNewFont(30)
 
-    -- get the height of the font to help calculate vertical positions of menu items
+    -- obeter a altura da fonte para ajudar a calcular as posições verticais dos botões do menus
     font_height = font:getHeight()
 
     -- definindo a posição inicial do jogador
@@ -59,7 +62,7 @@ function love.load()
     local startY = tileSize * 5
     
     -- carregando o jogador principal
-    player = Player.load(world, startX, startY)
+    player = Player.load(world, startX, startY, 3)
 
     -- carregando os inimigos (dinossauros)
     Enemies.load(world)
@@ -68,8 +71,6 @@ function love.load()
     walls = Collision.loadWalls(world, game_map)
     diamonds = Collision.loadDiamonds(world, game_map, "Diamonds", "Diamond")
     pink_diamonds = Collision.loadDiamonds(world, game_map, "PinkDiamonds", "PinkDiamond")
-
-    gameState = nil
 end
 
 function love.update(dt)
@@ -77,12 +78,19 @@ function love.update(dt)
     -- Recebendo dados do servidor
     local data = udp:receive()
     if data then
-        local response = json.decode(data)
+        local response, pos, err = json.decode(data)
+
+        if not response then
+            print("Erro ao decodificar JSON:", err or "resposta nula")
+            print("Conteúdo recebido:", data)
+            return -- ignora este pacote
+        end
+
         for k, v in pairs(response) do
             print(k, v)
         end
 
-        if response.action == "initial_game" then
+        if response.action == "initial_game" or response.action == "enemy_collision" or response.action == "game_over" then
             gameState = response.gameState
         elseif response.action == "diamond_collision" then
             gameState.total_diamonds = response.diamonds
@@ -112,7 +120,9 @@ function love.update(dt)
 
     -- Colisão do jogador com os diamantes
     Collision.handleDiamondCollision(player, "Diamond", "Diamonds", diamonds, "totalDiamonds", game_map, udp)
-    Collision.handleDiamondCollision(player, "PinkDiamond", "PinkDiamonds", pink_diamonds, "totalPinkDiamonds", game_map, udp)   
+    Collision.handleDiamondCollision(player, "PinkDiamond", "PinkDiamonds", pink_diamonds, "totalPinkDiamonds", game_map, udp)
+    -- Colisão do jogador com os inimigos
+    player = Collision.handleEnemyPlayerCollision(player, udp, world)
 end
 
 function love.draw()
@@ -140,7 +150,7 @@ function drawGame(game_map, player, world, gameState)
     Enemies.draw()
 
     -- Desenhando os colisores para melhor visualização
-    world:draw()
+    --world:draw()
     
     font = love.graphics.setNewFont(20)
     if gameState then
