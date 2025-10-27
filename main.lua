@@ -9,6 +9,7 @@ local Enemies = require "enemies"
 local Collision = require "collision"
 local Menu = require "menu"
 local HowToPlay = require "how_to_play"
+local GameOver = require "game_over"
 
 -- importando bibliotecas para rede
 local socket = require "socket"
@@ -29,7 +30,7 @@ function love.load()
     -- carregando as possíveis telas do jogo
     Menu.load(udp)
     HowToPlay.load(udp)
-    -- GameOver.load
+    GameOver.load(udp)
 
     -- carregando o mapa
     game_map = sti('maps/testeMap.lua')
@@ -131,6 +132,8 @@ function love.draw()
         Menu.draw()
     elseif gameState and gameState.current_screen == "how_to_play" then
         HowToPlay.draw()
+    elseif gameState and gameState.current_screen == "game_over" then
+        GameOver.draw()
     else
         drawGame(game_map, player, world, gameState)
     end
