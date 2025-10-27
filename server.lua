@@ -13,7 +13,7 @@ local gameState = nil
 local function reset_game_state()
     return {
         current_screen = "menu",
-        total_diamonds = 108,
+        total_diamonds = 113,
         total_pink_diamonds = 7,
         lives_number = 3,
         player_position = {x = 524.8, y = 320},

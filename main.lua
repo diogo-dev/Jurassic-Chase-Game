@@ -5,6 +5,7 @@ wf = require "libraries/windfield"
 
 -- importando módulos
 local Player = require "player"
+local Enemies = require "enemies"
 local Collision = require "collision"
 local Menu = require "menu"
 local HowToPlay = require "how_to_play"
@@ -37,8 +38,8 @@ function love.load()
     -- classes de colisão
     world:addCollisionClass('Player')
     world:addCollisionClass('Enemy')
-    world:addCollisionClass('Diamond')
-    world:addCollisionClass('PinkDiamond')
+    world:addCollisionClass('Diamond', {ignores = {'Enemy'}})
+    world:addCollisionClass('PinkDiamond', {ignores = {'Enemy'}})
     world:addCollisionClass('Wall')
 
     -- declarando uma variável do tamanho de cada bloco para o posicionamento inicial dos personagens
@@ -59,6 +60,9 @@ function love.load()
     
     -- carregando o jogador principal
     player = Player.load(world, startX, startY)
+
+    -- carregando os inimigos (dinossauros)
+    Enemies.load(world)
 
     -- Carregando colisões
     walls = Collision.loadWalls(world, game_map)
@@ -95,6 +99,8 @@ function love.update(dt)
     Player.updateMovement(player)
     -- Mantendo o jogador dentro dos limites da tela
     Player.playerWindowLimits(player, mapWidth, mapHeight)
+    -- Atualizando os inimingos
+    Enemies.update(dt)
     -- Atualizado o mundo físico do jogo
     world:update(dt)
     -- Sincronizando a posição do jogador com o seu colisor
@@ -130,8 +136,11 @@ function drawGame(game_map, player, world, gameState)
     -- Parâmetros: imagem, posição x, posição y, rotação, escala x, escala y, offset x, offset y
     player.directionSprite:draw(player.spriteSheet, player.x, player.y, nil, 3.2, 3.2, 6, 9)
 
+    -- Desenhar os inimigos
+    Enemies.draw()
+
     -- Desenhando os colisores para melhor visualização
-    --world:draw()
+    world:draw()
     
     font = love.graphics.setNewFont(20)
     if gameState then
