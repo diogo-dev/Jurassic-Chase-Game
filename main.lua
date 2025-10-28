@@ -97,10 +97,30 @@ function love.update(dt)
             gameState.total_diamonds = response.diamonds
         elseif response.action == "pink_diamond_collision" then
             gameState.total_pink_diamonds = response.pink_diamonds
+             
+            -- aumentar a velocidade do jogador por 1,5 segundos
+            if response.speedBoost and player then
+                player.baseSpeed = player.baseSpeed or player.speed    -- salva speed base se ainda não existir
+                local mult = response.speedBoost.multiplier or 1.0
+                player.speed = player.baseSpeed * mult
+                player.speedBoostTimer = response.speedBoost.duration or 0
+                player.speedBoostMultiplier = mult
+            end
+
         elseif response.action == "change_current_screen" then
             gameState.current_screen = response.current_screen
         else
             print("Aguardando dados do servidor...")
+        end
+    end
+
+    -- Atualizar quando o speedBoostTimer do player existir
+    if player and player.speedBoostTimer then
+        player.speedBoostTimer = player.speedBoostTimer - dt
+        if player.speedBoostTimer <= 0 then
+            player.speed = player.baseSpeed or player.speed
+            player.speedBoostTimer = nil
+            player.speedBoostMultiplier = nil
         end
     end
 

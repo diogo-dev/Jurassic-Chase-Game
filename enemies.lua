@@ -21,7 +21,7 @@ end
 
 function Enemies.load(world)
     local tileSize = 64
-    local speed = 200
+    local speed = 160 
     local width, height = 45, 50
 
     local minChange, maxChange = 2.5, 5.0
