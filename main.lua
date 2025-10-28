@@ -91,7 +91,7 @@ function love.update(dt)
             print(k, v)
         end
 
-        if response.action == "initial_game" or response.action == "enemy_collision" or response.action == "game_over" then
+        if response.action == "initial_game" then
             gameState = response.gameState
         elseif response.action == "diamond_collision" then
             gameState.total_diamonds = response.diamonds
@@ -100,7 +100,7 @@ function love.update(dt)
              
             -- aumentar a velocidade do jogador por 1,5 segundos
             if response.speedBoost and player then
-                player.baseSpeed = player.baseSpeed or player.speed    -- salva speed base se ainda não existir
+                player.baseSpeed = player.baseSpeed or player.speed
                 local mult = response.speedBoost.multiplier or 1.0
                 player.speed = player.baseSpeed * mult
                 player.speedBoostTimer = response.speedBoost.duration or 0
@@ -108,6 +108,12 @@ function love.update(dt)
             end
 
         elseif response.action == "change_current_screen" then
+            gameState.current_screen = response.current_screen
+        elseif response.action == "enemy_collision" then
+            gameState.lives_number = response.remaining_lives
+            gameState.player_position = response.player_position
+        elseif response.action == "game_over" then
+            gameState.lives_number = response.remaining_lives
             gameState.current_screen = response.current_screen
         else
             print("Aguardando dados do servidor...")
@@ -124,7 +130,7 @@ function love.update(dt)
         end
     end
 
-    -- Atualizando o movimento do jogador
+    -- Atualizando o movimento do jogador 
     Player.updateMovement(player)
     -- Mantendo o jogador dentro dos limites da tela
     Player.playerWindowLimits(player, mapWidth, mapHeight)
@@ -132,10 +138,10 @@ function love.update(dt)
     Enemies.update(dt)
     -- Atualizado o mundo físico do jogo
     world:update(dt)
-    -- Sincronizando a posição do jogador com o seu colisor
+    -- Sincronizando a posição do jogador com o seu colisor 
     player.x, player.y = player.collider:getPosition()
     -- Atualizando a animação do sprite do jogador
-    player.directionSprite:update(dt)   
+    player.directionSprite:update(dt) 
     -- Atualizando o mapa 
     game_map:update(dt) 
 

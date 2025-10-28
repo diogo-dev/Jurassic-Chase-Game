@@ -57,6 +57,9 @@ function Player.playerWindowLimits(player, mapWidth, mapHeight)
 end
 
 function Player.updateMovement(player)
+    -- proteção: não opera sem o colisor do player
+    if not player or not player.collider then return end
+
     local isMoving = false
 
     -- velocity of the collider

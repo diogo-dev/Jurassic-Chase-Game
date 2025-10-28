@@ -30,7 +30,7 @@ local function diamondCollision(class)
         response = { action = "diamond_collision", diamonds =  gameState.total_diamonds }
     elseif class == "PinkDiamond" then
         gameState.total_pink_diamonds = gameState.total_pink_diamonds - 1
-        local speedBoost = {multiplier = 1.8, duration = 1.5}
+        local speedBoost = { multiplier = 1.8, duration = 1.5 }
         response = { action = "pink_diamond_collision", pink_diamonds =  gameState.total_pink_diamonds, speedBoost = speedBoost }
     end
 
@@ -40,13 +40,11 @@ end
 local function dinoCollision()
     if gameState.lives_number == 1 then
         gameState.lives_number = gameState.lives_number - 1
-        gameState.current_screen = "game_over"
-        response = { action = "game_over", gameState = gameState }
+        response = { action = "game_over", remaining_lives = gameState.lives_number, current_screen = "game_over" }
     else
         gameState.lives_number = gameState.lives_number - 1
-        gameState.player_position.x = 524.8
-        gameState.player_position.y = 320
-        response = { action = "enemy_collision", gameState = gameState }
+        local player_position = { x = 524.8, y = 320 }
+        response = { action = "enemy_collision", remaining_lives = gameState.lives_number, player_position = player_position }
     end
 
     return response
