@@ -10,7 +10,7 @@ local function change_screen(screen, clientSocket)
 end
 
 function HowToPlay.load(clientSocket)
-    --HowToPlay.backgroundImage = love.graphics.newImage("assets/background.jpg")
+    HowToPlay.backgroundImage = love.graphics.newImage("assets/instructions.png")
 
     HowToPlay.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 90)
     HowToPlay.fontText = love.graphics.newFont(20)
@@ -27,61 +27,27 @@ function HowToPlay.draw()
     local ww = love.graphics.getWidth()
     local wh = love.graphics.getHeight()
 
-    -- fundo da tela
-    love.graphics.setColor(0, 0, 0, 1)
-    love.graphics.rectangle("fill", 0, 0, ww, wh)
+    -- desenha o fundo
+  if HowToPlay.backgroundImage then
+    love.graphics.setColor(1, 1, 1, 1)
+    local iw, ih = HowToPlay.backgroundImage:getDimensions()
+    -- opção: forçar nearest para evitar blur em pixel art
+    HowToPlay.backgroundImage:setFilter('nearest', 'nearest')
+    local x = (ww - iw) / 2
+    local y = (wh - ih) / 2
+    love.graphics.draw(HowToPlay.backgroundImage, x, y)
+  end
 
-    -- desenha o título
-    local title_text = "Como Jogar"
-    love.graphics.setFont(HowToPlay.fontTitle)
-    love.graphics.setColor(0.55, 0.27, 0.07, 1)
-    local title_width = HowToPlay.fontTitle:getWidth(title_text)
-    love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.5), wh * 0.15)
-
-    local title_text = "Como Jogar"
-    love.graphics.setFont(HowToPlay.fontTitle)
-    love.graphics.setColor(1, 0.8, 0, 1)
-    local title_width = HowToPlay.fontTitle:getWidth(title_text)
-    love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.51), wh * 0.155)
-
-    -- instruções
+    -- botão voltar
     love.graphics.setFont(HowToPlay.fontText)
     love.graphics.setColor(1, 1, 1, 1)
 
-    -- substituir depois por imagem
-    local instructions = {
-        "-> Use as setas para mover o personagem.",
-        "-> Colete todos os diamantes azuis e rosas pelo mapa.",
-        "-> Evite colidir com árvores e obstáculos.",
-        "-> Você começa com 3 vidas.",
-        "-> Você tem um total de 3 minutos para completar cada fase.",
-        "-> Fique longe dos dinossauros — eles vão te perseguir!"
-    }
-
-    local goals = {
-        "1) Coletar todos os diamantes azuis e rosas",
-        "2) Completar as duas fases antes do tempo acabar"
-    }
-
-    local y = 260
-    for _, line in ipairs(instructions) do
-        love.graphics.print(line, 240, y)
-        y = y + 35
-    end
-
-    y = y + 50
-    for _, line in ipairs(goals) do
-        love.graphics.print(line, 240, y)
-        y = y + 35
-    end
-
-    -- botão voltar
     local button = HowToPlay.button_back
     local buttonText = button.text
     local buttonW = HowToPlay.fontText:getWidth(buttonText)
     local buttonH = HowToPlay.fontText:getHeight()
     local bx = (ww - buttonW) * 0.5
-    local by = wh - 120
+    local by = wh - 100
 
     -- detectar mouse
     local mx, my = love.mouse.getPosition()
@@ -97,7 +63,7 @@ function HowToPlay.draw()
     end
 
     if hot then
-        love.graphics.setColor(0.2, 0.8, 0.2, 1)
+        love.graphics.setColor(0.2, 0.3, 0.2, 1)
     else
         love.graphics.setColor(0.2, 0.5, 0.2, 1)
     end
