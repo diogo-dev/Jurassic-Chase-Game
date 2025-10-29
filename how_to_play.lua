@@ -31,8 +31,6 @@ function HowToPlay.draw()
   if HowToPlay.backgroundImage then
     love.graphics.setColor(1, 1, 1, 1)
     local iw, ih = HowToPlay.backgroundImage:getDimensions()
-    -- opção: forçar nearest para evitar blur em pixel art
-    HowToPlay.backgroundImage:setFilter('nearest', 'nearest')
     local x = (ww - iw) / 2
     local y = (wh - ih) / 2
     love.graphics.draw(HowToPlay.backgroundImage, x, y)
@@ -40,8 +38,6 @@ function HowToPlay.draw()
 
     -- botão voltar
     love.graphics.setFont(HowToPlay.fontText)
-    love.graphics.setColor(1, 1, 1, 1)
-
     local button = HowToPlay.button_back
     local buttonText = button.text
     local buttonW = HowToPlay.fontText:getWidth(buttonText)

@@ -10,6 +10,7 @@ local function change_screen(screen, clientSocket)
 end
 
 function GameOver.load(clientSocket)
+    GameOver.backgroundImage = love.graphics.newImage("assets/gameOver.png")
     GameOver.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 110)
     GameOver.fontText = love.graphics.newFont(20)
     GameOver.clientSocket = clientSocket
@@ -25,22 +26,13 @@ function GameOver.draw()
     local ww = love.graphics.getWidth()
     local wh = love.graphics.getHeight()
 
-    -- fundo da tela
-    love.graphics.setColor(0, 0, 0, 1)
-    love.graphics.rectangle("fill", 0, 0, ww, wh)
-
-    -- texto de game over
-    local title_text = "Game Over"
-    love.graphics.setFont(GameOver.fontTitle)
-    love.graphics.setColor(0.55, 0.27, 0.07, 1)
-    local title_width = GameOver.fontTitle:getWidth(title_text)
-    love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.5), wh * 0.35)
-
-    local title_text = "Game Over"
-    love.graphics.setFont(GameOver.fontTitle)
-    love.graphics.setColor(1, 0.8, 0, 1)
-    local title_width = GameOver.fontTitle:getWidth(title_text)
-    love.graphics.print(title_text, (ww * 0.5) - (title_width * 0.51), wh * 0.355)
+    if GameOver.backgroundImage then
+        love.graphics.setColor(1, 1, 1, 1)
+        local iw, ih = GameOver.backgroundImage:getDimensions()
+        local x = (ww - iw) / 2
+        local y = (wh - ih) / 2
+        love.graphics.draw(GameOver.backgroundImage, x, y)
+    end
 
     -- botão voltar
     love.graphics.setFont(GameOver.fontText)
@@ -65,7 +57,7 @@ function GameOver.draw()
     end
 
     if hot then
-        love.graphics.setColor(0.2, 0.8, 0.2, 1)
+        love.graphics.setColor(0.2, 0.3, 0.2, 1)
     else
         love.graphics.setColor(0.2, 0.5, 0.2, 1)
     end
