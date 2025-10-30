@@ -10,5 +10,12 @@
 </ul>
 
 <h2>Comandos de execução</h2>
-<p>Primeiramente, abra o terminal e rode o seguinte comando: lua server.lua para iniciar a execução do servidor</p>
+<p>Primeiramente, abra o terminal e rode o seguinte comando: "lua /.server.lua" para iniciar o servidor</p>
 <p>Depois entre no arquivo do cliente (main.lua) e pressione as teclas (alt + L) para executá-lo. O comando <i>"love ."</i> só funciona se você colocar o caminho do executável <i>"love.exe"</i> na sua váriável de ambiente PATH.</p>
+
+<h2>Rodando em máquinas diferentes</h2>
+<ul>
+  <li>Modificar o endereço IP no cliente (colocar o IP real do servidor)</li>
+  <li>Configurar o firewall do servidor - Libere a porta 12345 no servidor</li>
+  <li>Garantir que ambas as máquinas estejam na mesma rede</li>
+</ul>
