@@ -17,6 +17,7 @@ local function reset_game_state()
         total_pink_diamonds = 7,
         lives_number = 3,
         player_position = {x = 524.8, y = 320},
+        is_paused = false,
         player_speed = 120
     }
 end
@@ -53,6 +54,7 @@ end
 while true do
     local data, ip, port = udp:receivefrom()
     if data then
+        print(string.format("Recebido de %s:%d: %s", ip, port, data))
         print("Comando recebido:", data)
         -- Transforma a string JSON em uma tabela Lua
         data = json.decode(data)

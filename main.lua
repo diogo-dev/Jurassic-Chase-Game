@@ -16,6 +16,8 @@ local socket = require "socket"
 local json = require "libraries/dkjson"
 local udp
 
+local isPaused = false
+
 function love.load()
     gameState = nil
 
@@ -75,6 +77,10 @@ function love.load()
 end
 
 function love.update(dt)
+    -- Caso o jogo esteja pausado, não atualiza nada (trava o jogo)
+    if isPaused then
+        return
+    end
 
     -- Recebendo dados do servidor
     local data = udp:receive()
@@ -164,6 +170,20 @@ function love.draw()
         drawGame(game_map, player, world, gameState)
     end
 
+    if isPaused then
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+
+        love.graphics.setColor(0.7, 0.4, 0.1, 1) -- marrom
+        love.graphics.setFont(love.graphics.newFont(48))
+        love.graphics.printf("JOGO PAUSADO", 0, love.graphics.getHeight()/2 - 40, love.graphics.getWidth(), "center")
+
+        love.graphics.setFont(love.graphics.newFont(24))
+        love.graphics.printf("Pressione E para continuar", 0, love.graphics.getHeight()/2 + 20, love.graphics.getWidth(), "center")
+
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+
 end
 
 
@@ -197,3 +217,15 @@ function drawGame(game_map, player, world, gameState)
     end
 end
 
+function love.keypressed(key)
+    if key == "e" and gameState.current_screen == "running" then
+        isPaused = not isPaused
+    end
+
+    -- Adicionar música de fundo depois
+    -- if gameState.isPaused then
+    --     backgroundMusic:pause()
+    -- else
+    --     backgroundMusic:play()
+    -- end
+end
