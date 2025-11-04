@@ -16,7 +16,7 @@ local function reset_game_state()
         total_diamonds = 113,
         total_pink_diamonds = 7,
         lives_number = 3,
-        player_position = {x = 524.8, y = 320},
+        player_position = { x = 262.4, y = 160 },
         is_paused = false,
         player_speed = 120
     }
@@ -44,7 +44,7 @@ local function dinoCollision()
         response = { action = "game_over", remaining_lives = gameState.lives_number, current_screen = "game_over" }
     else
         gameState.lives_number = gameState.lives_number - 1
-        local player_position = { x = 524.8, y = 320 }
+        local player_position = { x = 262.4, y = 160 }
         response = { action = "enemy_collision", remaining_lives = gameState.lives_number, player_position = player_position }
     end
 
