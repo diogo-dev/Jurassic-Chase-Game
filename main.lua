@@ -35,7 +35,7 @@ function love.load()
     GameOver.load(udp)
 
     -- carregando o mapa
-    game_map = sti('maps/testeMap.lua')
+    game_map = sti('maps/mapa.lua')
     world = wf.newWorld(0, 0)
     
     -- filtro para pixel art (mudança de scala não afeta a qualidade das sprites)
@@ -49,7 +49,7 @@ function love.load()
     world:addCollisionClass('Wall')
 
     -- declarando uma variável do tamanho de cada bloco para o posicionamento inicial dos personagens
-    tileSize = 64
+    tileSize = 32
     mapWidth = game_map.width * game_map.tilewidth
     mapHeight = game_map.height * game_map.tileheight
 
@@ -171,17 +171,7 @@ function love.draw()
     end
 
     if isPaused then
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
-
-        love.graphics.setColor(0.7, 0.4, 0.1, 1) -- marrom
-        love.graphics.setFont(love.graphics.newFont(48))
-        love.graphics.printf("JOGO PAUSADO", 0, love.graphics.getHeight()/2 - 40, love.graphics.getWidth(), "center")
-
-        love.graphics.setFont(love.graphics.newFont(24))
-        love.graphics.printf("Pressione E para continuar", 0, love.graphics.getHeight()/2 + 20, love.graphics.getWidth(), "center")
-
-        love.graphics.setColor(1, 1, 1, 1)
+        pausedGameDraw()
     end
 
 end
@@ -190,10 +180,11 @@ end
 function drawGame(game_map, player, world, gameState)
     -- Desenhando o mapa (now inside the testeMap.lua)
     game_map:draw()
+    --drawHUD(gameState)
 
     -- Desenhando o jogador
     -- Parâmetros: imagem, posição x, posição y, rotação, escala x, escala y, offset x, offset y
-    player.directionSprite:draw(player.spriteSheet, player.x, player.y, nil, 3.2, 3.2, 6, 9)
+    player.directionSprite:draw(player.spriteSheet, player.x, player.y, nil, player.scale, player.scale, player.frameW / 2, player.frameH / 2)
 
     -- Desenhar os inimigos
     Enemies.draw()
@@ -229,3 +220,43 @@ function love.keypressed(key)
     --     backgroundMusic:play()
     -- end
 end
+
+function pausedGameDraw()
+    love.graphics.setColor(0, 0, 0, 0.5)
+    love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+
+    love.graphics.setColor(0.7, 0.4, 0.1, 1) -- marrom
+    love.graphics.setFont(love.graphics.newFont(48))
+    love.graphics.printf("JOGO PAUSADO", 0, love.graphics.getHeight()/2 - 40, love.graphics.getWidth(), "center")
+
+    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.printf("Pressione E para continuar", 0, love.graphics.getHeight()/2 + 20, love.graphics.getWidth(), "center")
+
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
+function drawHUD(gameState)
+    local screenWidth = love.graphics.getWidth()
+    local screenHeight = love.graphics.getHeight()
+    local hudWidth = 200  -- largura da coluna da HUD
+
+    -- fundo da HUD (marrom)
+    love.graphics.setColor(0.5, 0.35, 0.2, 1)
+    love.graphics.rectangle("fill", screenWidth - hudWidth, 0, hudWidth, screenHeight)
+
+    -- texto em branco
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setFont(love.graphics.newFont(18))
+
+    local baseX = screenWidth - hudWidth + 20
+    local y = 40
+
+    love.graphics.print("📊 Status", baseX, y)
+    y = y + 40
+    love.graphics.print("Vidas: " .. (gameState.lives_number or 0), baseX, y)
+    y = y + 30
+    love.graphics.print("Diamantes: " .. (gameState.total_diamonds or 0), baseX, y)
+    y = y + 30
+    love.graphics.print("Pink Diamantes: " .. (gameState.total_pink_diamonds or 0), baseX, y)
+end
+

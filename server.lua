@@ -31,7 +31,7 @@ local function diamondCollision(class)
         response = { action = "diamond_collision", diamonds =  gameState.total_diamonds }
     elseif class == "PinkDiamond" then
         gameState.total_pink_diamonds = gameState.total_pink_diamonds - 1
-        local speedBoost = { multiplier = 1.8, duration = 1.5 }
+        local speedBoost = { multiplier = 1.8, duration = 0.8 }
         response = { action = "pink_diamond_collision", pink_diamonds =  gameState.total_pink_diamonds, speedBoost = speedBoost }
     end
 

@@ -20,14 +20,14 @@ local function tileToPixelCenter(tx, ty, tileSize)
 end
 
 function Enemies.load(world)
-    local tileSize = 64
-    local speed = 160 
-    local width, height = 45, 50
+    local tileSize = 32
+    local speed = 125 
+    local width, height = 25, 28
 
     local minChange, maxChange = 2.5, 5.0
 
     -- posições iniciais nas "pontas" do mapa (calculadas a partir do game_map)
-    local mapW, mapH = 16, 12 -- valores padrão caso game_map não esteja carregado
+    local mapW, mapH = 17, 18 
     if game_map then
         mapW, mapH = game_map.width, game_map.height
     end
@@ -49,19 +49,19 @@ function Enemies.load(world)
     local dinos = {}
 
     for i, pos in ipairs(startPositions) do
-        local frameW, frameH = 24, 24
-        local scale = 3
+        local frameW, frameH = 32, 32
+        local scale = 1
 
         local spawnX = (pos.x - 1) * tileSize + tileSize / 2
         local spawnY = (pos.y - 1) * tileSize + tileSize / 2
-        local collider = world:newBSGRectangleCollider(spawnX, spawnY, width, height, 10)
+        local collider = world:newBSGRectangleCollider(spawnX, spawnY, width, height, 2)
         collider:setFixedRotation(true)
         collider:setCollisionClass('Enemy')
 
         local spritePath = 'sprites/dino/Dino' .. i .. '.png'
         local spriteSheet = love.graphics.newImage(spritePath)
         local grid = anim8.newGrid(frameW, frameH, spriteSheet:getWidth(), spriteSheet:getHeight())
-        local moveAnim = anim8.newAnimation(grid('4-10', 1), 0.08)
+        local moveAnim = anim8.newAnimation(grid('1-6', 1), 0.08)
 
         local dirIndex = math.random(#directions)
 
@@ -127,7 +127,7 @@ local function pickNewDirection(e, bounds)
 end
 
 function Enemies.update(dt)
-    local tileSize = 64
+    local tileSize = 32
 
     if not Enemies.list then return end
     if not game_map then return end -- espera game_map global estar carregado

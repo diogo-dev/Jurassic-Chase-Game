@@ -24,8 +24,8 @@ local function change_screen(screen, clientSocket)
 end
 
 function Buttons.load(clientSocket)
-    font = love.graphics.setNewFont(32)
-    title_font = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 115)
+    font = love.graphics.setNewFont(23)
+    title_font = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 70)
     backgroundImage = love.graphics.newImage("assets/background.png")
 
     table.insert(Buttons, new_button(
@@ -59,7 +59,7 @@ function Buttons.draw()
     local x = (ww - backgroundImage:getWidth()) / 2
     local y = (wh - backgroundImage:getHeight()) / 2
     love.graphics.setColor(1, 1, 1, 0.7)
-    love.graphics.draw(backgroundImage, x, y + 60)
+    love.graphics.draw(backgroundImage, x, y + 130)
   end
 
   -- desenha o título
@@ -86,7 +86,7 @@ function Buttons.draw()
   -- altura total dos botões + espaçamento
   local total_height =  (BUTTON_HEIGHT + margin) * #Buttons
 
-  local cursor_y = 0
+  local cursor_y = 50
 
   -- desenhando os botões
   for i, button in ipairs(Buttons) do

@@ -43,7 +43,7 @@ function HowToPlay.draw()
     local buttonW = HowToPlay.fontText:getWidth(buttonText)
     local buttonH = HowToPlay.fontText:getHeight()
     local bx = (ww - buttonW) * 0.5
-    local by = wh - 100
+    local by = wh - 80
 
     -- detectar mouse
     local mx, my = love.mouse.getPosition()
