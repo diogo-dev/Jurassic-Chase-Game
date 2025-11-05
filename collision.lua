@@ -110,20 +110,17 @@ function Collision.handleEnemyPlayerCollision(player, clientSocket, world)
             print("falha no envio:", err)
         end
 
+        -- ativa o "travamento" e pausa por um segundo
+        isCollisionFreeze = true
+        collisionDelay = 1.5
+
         -- destrói o colisor atual para "retirar" o jogador do jogo
         if player.collider and player.collider.destroy then
             player.collider:destroy()
         end
 
-        -- reinicia o jogador com o número atual de vida
-        if gameState and gameState.player_position then
-            local px = gameState.player_position.x
-            local py = gameState.player_position.y
-            local current_lives = gameState.lives_number
-
-            local new_player = Player.load(world, px, py, current_lives)
-            return new_player
-        end
+        -- agenda o respawn depois da pausa
+        player.pendingRespawn = true
         
     end
 

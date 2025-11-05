@@ -16,7 +16,11 @@ local socket = require "socket"
 local json = require "libraries/dkjson"
 local udp
 
+-- variáveis globais do jogo
 local isPaused = false
+isCollisionFreeze = false
+collisionDelay = 0    
+
 
 function love.load()
     -- configurando a janela do jogo
@@ -85,8 +89,9 @@ end
 function love.update(dt)
     -- Caso o jogo esteja pausado, não atualiza nada (trava o jogo)
     if isPaused then
-        return
+        return 
     end
+
 
     -- Recebendo dados do servidor
     local data = udp:receive()
@@ -135,26 +140,16 @@ function love.update(dt)
         end
     end
 
-    -- Atualizar quando o speedBoostTimer do player existir
-    if player and player.speedBoostTimer then
-        player.speedBoostTimer = player.speedBoostTimer - dt
-        if player.speedBoostTimer <= 0 then
-            player.speed = player.baseSpeed or player.speed
-            player.speedBoostTimer = nil
-            player.speedBoostMultiplier = nil
-        end
+    -- verificar se o jogo está em estado de "congelamento" por colisão
+    if updateCollisionFreeze(gameState, dt) then
+        return 
     end
 
-    -- Atualiza o timer do jogo
-    if gameState and gameState.current_screen == "running" and not isPaused then
-        if gameState.timer > 0 then
-            gameState.timer = gameState.timer - dt
-        else
-            gameState.timer = 0
-            -- O tempo acabou: jogador perde
-            gameState.current_screen = "game_over"
-        end
-    end
+    -- Atualizar quando o speedBoostTimer do player
+    updatePlayerSpeedBoost(player, dt)
+
+    -- Atualizando o timer do jogo
+    updateGameTimer(gameState, dt)
 
     -- Atualizando o movimento do jogador 
     Player.updateMovement(player)
@@ -279,5 +274,54 @@ function drawHUD(gameState, hudHeight)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(timeText, 185, y - 2)
 end
+
+function updatePlayerSpeedBoost(player, dt)
+    if player and player.speedBoostTimer then
+        player.speedBoostTimer = player.speedBoostTimer - dt
+        if player.speedBoostTimer <= 0 then
+            player.speed = player.baseSpeed or player.speed
+            player.speedBoostTimer = nil
+            player.speedBoostMultiplier = nil
+        end
+    end
+end
+
+function updateGameTimer(gameState, dt)
+    if gameState and gameState.current_screen == "running" and not isPaused then
+        if gameState.timer > 0 then
+            gameState.timer = gameState.timer - dt
+        else
+            gameState.timer = 0
+            -- O tempo acabou: jogador perde
+            gameState.current_screen = "game_over"
+        end
+    end
+end
+
+function updateCollisionFreeze(gameState, dt)
+    if isCollisionFreeze then
+        collisionDelay = collisionDelay - dt
+        if collisionDelay <= 0 then
+            isCollisionFreeze = false
+        else
+            return true -- ainda em pausa, interrompe o update
+        end
+    end
+
+    if not isCollisionFreeze and player.pendingRespawn then
+        player.pendingRespawn = false
+
+        if gameState and gameState.player_position then
+            local px = gameState.player_position.x
+            local py = gameState.player_position.y
+            local current_lives = gameState.lives_number
+
+            player = Player.load(world, px, py, current_lives)
+        end
+    end
+
+    return false -- não está congelado, pode continuar o update
+end
+
 
 
