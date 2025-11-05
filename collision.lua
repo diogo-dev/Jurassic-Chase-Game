@@ -36,6 +36,7 @@ function Collision.loadDiamonds(world, gameMap, layerName, collisionClass)
     local diamonds = {}
     local diamond_layer = gameMap.layers[layerName]
 
+    local counter = 0
     if diamond_layer then
         for y = 1, diamond_layer.height do
             for x = 1, diamond_layer.width do
@@ -54,10 +55,12 @@ function Collision.loadDiamonds(world, gameMap, layerName, collisionClass)
                     collider.tile_y = y
                     
                     table.insert(diamonds, collider)
+                    counter = counter + 1
                 end
             end
         end
     end
+    print("Loaded " .. counter .. " " .. layerName)
     return diamonds
 end
 
@@ -121,8 +124,6 @@ function Collision.handleEnemyPlayerCollision(player, clientSocket, world)
             local new_player = Player.load(world, px, py, current_lives)
             return new_player
         end
-
-        -- depois colocar aqui um código de fallback (caso, o gameState seja nil, então reposicinar jogador manualmente)
         
     end
 

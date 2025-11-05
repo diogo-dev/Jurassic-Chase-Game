@@ -4,6 +4,7 @@ local GameOver = {}
 local function change_screen(screen, clientSocket)
     local message = {
         action = "change_current_screen",
+        prev_screen = "game_over",
         current_screen = screen
     }
     clientSocket:send(json.encode(message) .. "\n")

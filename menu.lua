@@ -18,6 +18,7 @@ local function change_screen(screen, clientSocket)
     -- informar ao servidor a mudança de tela
     local message = {
         action = "change_current_screen",
+        prev_screen = "menu",
         current_screen = screen
     }
     clientSocket:send(json.encode(message) .. "\n")

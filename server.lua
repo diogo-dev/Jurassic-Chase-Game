@@ -13,12 +13,13 @@ local gameState = nil
 local function reset_game_state()
     return {
         current_screen = "menu",
-        total_diamonds = 113,
-        total_pink_diamonds = 7,
+        total_diamonds = 168,
+        total_pink_diamonds = 8,
         lives_number = 3,
         player_position = { x = 262.4, y = 160 },
         is_paused = false,
-        player_speed = 120
+        player_speed = 120,
+        timer = 180
     }
 end
 
@@ -51,6 +52,19 @@ local function dinoCollision()
     return response
 end
 
+local function changeCurrentScreen(data)
+
+    if data.prev_screen == "game_over" and data.current_screen == "running" then
+        gameState = reset_game_state()
+        gameState.current_screen = "running"
+        return { action = "change_current_screen", gameState = gameState, prev_screen = "game_over" }
+    else
+        gameState.current_screen = data.current_screen
+        return { action = "change_current_screen", current_screen = gameState.current_screen }
+    end
+
+end
+
 while true do
     local data, ip, port = udp:receivefrom()
     if data then
@@ -66,8 +80,7 @@ while true do
         elseif data.action == "collect_diamond" then
             response = diamondCollision(data.collisionClass)
         elseif data.action == "change_current_screen" then
-            gameState.current_screen = data.current_screen
-            response = { action = "change_current_screen", current_screen = gameState.current_screen }
+            response = changeCurrentScreen(data)
         elseif data.action == "enemy_collision" then
             response = dinoCollision()
         else

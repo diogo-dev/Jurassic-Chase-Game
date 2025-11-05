@@ -19,6 +19,12 @@ local udp
 local isPaused = false
 
 function love.load()
+    -- configurando a janela do jogo
+    local hudHeight = 50
+    love.window.setMode(544, 576 + hudHeight)
+    heartImage = love.graphics.newImage("assets/heart.png")
+    clockImage = love.graphics.newImage("assets/clock.png")
+
     gameState = nil
 
     -- configurando a rede
@@ -35,7 +41,7 @@ function love.load()
     GameOver.load(udp)
 
     -- carregando o mapa
-    game_map = sti('maps/mapa.lua')
+    game_map = sti('maps/fase1.lua')
     world = wf.newWorld(0, 0)
     
     -- filtro para pixel art (mudança de scala não afeta a qualidade das sprites)
@@ -97,13 +103,13 @@ function love.update(dt)
             print(k, v)
         end
 
+        -- Condicionais para tratar as respostas do servidor
         if response.action == "initial_game" then
             gameState = response.gameState
         elseif response.action == "diamond_collision" then
             gameState.total_diamonds = response.diamonds
         elseif response.action == "pink_diamond_collision" then
             gameState.total_pink_diamonds = response.pink_diamonds
-             
             -- aumentar a velocidade do jogador por 1,5 segundos
             if response.speedBoost and player then
                 player.baseSpeed = player.baseSpeed or player.speed
@@ -112,9 +118,12 @@ function love.update(dt)
                 player.speedBoostTimer = response.speedBoost.duration or 0
                 player.speedBoostMultiplier = mult
             end
-
         elseif response.action == "change_current_screen" then
-            gameState.current_screen = response.current_screen
+            if response.prev_screen == "game_over" and response.current_screen == "running" then
+                gameState = response.gameState
+            else
+                gameState.current_screen = response.current_screen
+            end
         elseif response.action == "enemy_collision" then
             gameState.lives_number = response.remaining_lives
             gameState.player_position = response.player_position
@@ -133,6 +142,17 @@ function love.update(dt)
             player.speed = player.baseSpeed or player.speed
             player.speedBoostTimer = nil
             player.speedBoostMultiplier = nil
+        end
+    end
+
+    -- Atualiza o timer do jogo
+    if gameState and gameState.current_screen == "running" and not isPaused then
+        if gameState.timer > 0 then
+            gameState.timer = gameState.timer - dt
+        else
+            gameState.timer = 0
+            -- O tempo acabou: jogador perde
+            gameState.current_screen = "game_over"
         end
     end
 
@@ -168,6 +188,7 @@ function love.draw()
         GameOver.draw()
     else
         drawGame(game_map, player, world, gameState)
+        drawHUD(gameState, 50)
     end
 
     if isPaused then
@@ -191,21 +212,6 @@ function drawGame(game_map, player, world, gameState)
 
     -- Desenhando os colisores para melhor visualização
     --world:draw()
-    
-    font = love.graphics.setNewFont(20)
-    if gameState then
-        love.graphics.setColor(1, 1, 1, 1) 
-        love.graphics.print("Diamantes: " .. gameState.total_diamonds, 10, 10)
-
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.print("Pink Diamantes: " .. gameState.total_pink_diamonds, 10, 30)
-
-        love.graphics.setColor(1, 1, 1, 1)
-        love.graphics.print("Números de vidas: " .. gameState.lives_number, 10, 50)
-    else
-        love.graphics.setColor(1, 0, 0)
-        love.graphics.print("Aguardando estado do jogo do servidor...", 10, 10)
-    end
 end
 
 function love.keypressed(key)
@@ -235,28 +241,43 @@ function pausedGameDraw()
     love.graphics.setColor(1, 1, 1, 1)
 end
 
-function drawHUD(gameState)
-    local screenWidth = love.graphics.getWidth()
-    local screenHeight = love.graphics.getHeight()
-    local hudWidth = 200  -- largura da coluna da HUD
+function drawHUD(gameState, hudHeight)
 
-    -- fundo da HUD (marrom)
-    love.graphics.setColor(0.5, 0.35, 0.2, 1)
-    love.graphics.rectangle("fill", screenWidth - hudWidth, 0, hudWidth, screenHeight)
+    -- área do HUD
+    love.graphics.setColor(0, 0, 0, 0.6) 
+    love.graphics.rectangle("fill", 0, mapHeight, mapWidth, hudHeight)
+    love.graphics.setColor(1, 1, 1)
 
-    -- texto em branco
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(18))
+    local margin = 20
+    local y = mapHeight + 15
 
-    local baseX = screenWidth - hudWidth + 20
-    local y = 40
+    -- Dimensões desejadas
+    local desiredWidth = 26
+    local desiredHeight = 24
+    local scaleX = desiredWidth / heartImage:getWidth()
+    local scaleY = desiredHeight / heartImage:getHeight()
 
-    love.graphics.print("📊 Status", baseX, y)
-    y = y + 40
-    love.graphics.print("Vidas: " .. (gameState.lives_number or 0), baseX, y)
-    y = y + 30
-    love.graphics.print("Diamantes: " .. (gameState.total_diamonds or 0), baseX, y)
-    y = y + 30
-    love.graphics.print("Pink Diamantes: " .. (gameState.total_pink_diamonds or 0), baseX, y)
+    -- Desenha corações (vidas)
+    local lifeCount = gameState.lives_number or 3
+    local heartSpacing = 40
+    for i = 1, lifeCount do
+        love.graphics.draw(heartImage, margin + (i - 1) * heartSpacing, y, 0, scaleX, scaleY)
+    end
+
+    -- Relógio
+    local desiredClockSize = 26
+    local scaleClock = desiredClockSize / clockImage:getWidth()
+    love.graphics.draw(clockImage, 150, y, 0, scaleClock, scaleClock)
+
+    -- Tempo formatado
+    local remainingTime = math.max(0, gameState.timer)
+    local minutes = math.floor(remainingTime / 60)
+    local seconds = math.floor(remainingTime % 60)
+    local timeText = string.format("%02d:%02d", minutes, seconds)
+
+    love.graphics.setFont(love.graphics.newFont(25))
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print(timeText, 185, y - 2)
 end
+
 
