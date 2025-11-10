@@ -10,6 +10,7 @@ local Collision = require "collision"
 local Menu = require "menu"
 local HowToPlay = require "how_to_play"
 local GameOver = require "game_over"
+local Winner = require "winner"
 
 -- importando bibliotecas para rede
 local socket = require "socket"
@@ -17,10 +18,19 @@ local json = require "libraries/dkjson"
 local udp
 
 -- variáveis globais do jogo
-local isPaused = false
+isPaused = false
+isTransitioning = false
 isCollisionFreeze = false
 collisionDelay = 0    
+isGameOver = false
+tileSize = 32
 
+fade = {
+    alpha = 0,        
+    direction = nil,  
+    speed = 1.5,      
+    onComplete = nil  
+}
 
 function love.load()
     -- configurando a janela do jogo
@@ -43,55 +53,15 @@ function love.load()
     Menu.load(udp)
     HowToPlay.load(udp)
     GameOver.load(udp)
-
-    -- carregando o mapa
-    game_map = sti('maps/fase1.lua')
-    world = wf.newWorld(0, 0)
-    
-    -- filtro para pixel art (mudança de scala não afeta a qualidade das sprites)
-    love.graphics.setDefaultFilter('nearest', 'nearest')
-
-    -- classes de colisão
-    world:addCollisionClass('Player')
-    world:addCollisionClass('Enemy')
-    world:addCollisionClass('Diamond', {ignores = {'Enemy'}})
-    world:addCollisionClass('PinkDiamond', {ignores = {'Enemy'}})
-    world:addCollisionClass('Wall')
-
-    -- declarando uma variável do tamanho de cada bloco para o posicionamento inicial dos personagens
-    tileSize = 32
-    mapWidth = game_map.width * game_map.tilewidth
-    mapHeight = game_map.height * game_map.tileheight
-
-    -- Menu Options
-    -- use a big font for the menu
-    local font = love.graphics.setNewFont(30)
-
-    -- obeter a altura da fonte para ajudar a calcular as posições verticais dos botões do menus
-    font_height = font:getHeight()
-
-    -- definindo a posição inicial do jogador
-    local startX = tileSize * 8.2 
-    local startY = tileSize * 5
-    
-    -- carregando o jogador principal
-    player = Player.load(world, startX, startY, 3)
-
-    -- carregando os inimigos (dinossauros)
-    Enemies.load(world)
-
-    -- Carregando colisões
-    walls = Collision.loadWalls(world, game_map)
-    diamonds = Collision.loadDiamonds(world, game_map, "Diamonds", "Diamond")
-    pink_diamonds = Collision.loadDiamonds(world, game_map, "PinkDiamonds", "PinkDiamond")
+    Winner.load(udp)
 end
 
 function love.update(dt)
-    -- Caso o jogo esteja pausado, não atualiza nada (trava o jogo)
-    if isPaused then
-        return 
-    end
+    updateFade(dt)
 
+    if isPaused then return end
+
+    if isTransitioning then return end
 
     -- Recebendo dados do servidor
     local data = udp:receive()
@@ -101,43 +71,16 @@ function love.update(dt)
         if not response then
             print("Erro ao decodificar JSON:", err or "resposta nula")
             print("Conteúdo recebido:", data)
-            return -- ignora este pacote
+            return 
         end
 
-        for k, v in pairs(response) do
-            print(k, v)
-        end
+        handleServerResponse(response)
 
-        -- Condicionais para tratar as respostas do servidor
-        if response.action == "initial_game" then
-            gameState = response.gameState
-        elseif response.action == "diamond_collision" then
-            gameState.total_diamonds = response.diamonds
-        elseif response.action == "pink_diamond_collision" then
-            gameState.total_pink_diamonds = response.pink_diamonds
-            -- aumentar a velocidade do jogador por 1,5 segundos
-            if response.speedBoost and player then
-                player.baseSpeed = player.baseSpeed or player.speed
-                local mult = response.speedBoost.multiplier or 1.0
-                player.speed = player.baseSpeed * mult
-                player.speedBoostTimer = response.speedBoost.duration or 0
-                player.speedBoostMultiplier = mult
-            end
-        elseif response.action == "change_current_screen" then
-            if response.prev_screen == "game_over" and response.current_screen == "running" then
-                gameState = response.gameState
-            else
-                gameState.current_screen = response.current_screen
-            end
-        elseif response.action == "enemy_collision" then
-            gameState.lives_number = response.remaining_lives
-            gameState.player_position = response.player_position
-        elseif response.action == "game_over" then
-            gameState.lives_number = response.remaining_lives
-            gameState.current_screen = response.current_screen
-        else
-            print("Aguardando dados do servidor...")
-        end
+        if isTransitioning then return end
+    end
+
+    if not world or not game_map or not player then
+        return
     end
 
     -- verificar se o jogo está em estado de "congelamento" por colisão
@@ -175,12 +118,18 @@ end
 
 function love.draw()
 
+    if isTransitioning then
+        return
+    end
+
     if gameState and gameState.current_screen == "menu" then
         Menu.draw()
     elseif gameState and gameState.current_screen == "how_to_play" then
         HowToPlay.draw()
     elseif gameState and gameState.current_screen == "game_over" then
         GameOver.draw()
+    elseif gameState and gameState.current_screen == "winner" then
+        Winner.draw()
     else
         drawGame(game_map, player, world, gameState)
         drawHUD(gameState, 50)
@@ -190,8 +139,8 @@ function love.draw()
         pausedGameDraw()
     end
 
+    drawFade()
 end
-
 
 function drawGame(game_map, player, world, gameState)
     -- Desenhando o mapa (now inside the testeMap.lua)
@@ -299,6 +248,7 @@ function updateGameTimer(gameState, dt)
 end
 
 function updateCollisionFreeze(gameState, dt)
+
     if isCollisionFreeze then
         collisionDelay = collisionDelay - dt
         if collisionDelay <= 0 then
@@ -308,20 +258,196 @@ function updateCollisionFreeze(gameState, dt)
         end
     end
 
-    if not isCollisionFreeze and player.pendingRespawn then
+    if not isCollisionFreeze and player and player.pendingRespawn then
         player.pendingRespawn = false
 
         if gameState and gameState.player_position then
-            local px = gameState.player_position.x
-            local py = gameState.player_position.y
+            local px = gameState.player_position.x * tileSize
+            local py = gameState.player_position.y * tileSize
             local current_lives = gameState.lives_number
 
             player = Player.load(world, px, py, current_lives)
         end
+    elseif not isCollisionFreeze and isGameOver then
+        isGameOver = false
+        gameState.current_screen = "game_over"
     end
 
     return false -- não está congelado, pode continuar o update
 end
 
+function loadGame(map, posX, posY)
+    -- carregando o mapa
+    game_map = sti(map)
+    world = wf.newWorld(0, 0)
+    
+    -- filtro para pixel art (mudança de scala não afeta a qualidade das sprites)
+    love.graphics.setDefaultFilter('nearest', 'nearest')
 
+    -- classes de colisão
+    world:addCollisionClass('Player')
+    world:addCollisionClass('Enemy')
+    world:addCollisionClass('Diamond', {ignores = {'Enemy'}})
+    world:addCollisionClass('PinkDiamond', {ignores = {'Enemy'}})
+    world:addCollisionClass('Wall')
 
+    -- declarando uma variável do tamanho de cada bloco para o posicionamento inicial dos personagens
+    mapWidth = game_map.width * game_map.tilewidth
+    mapHeight = game_map.height * game_map.tileheight
+
+    -- definindo a posição inicial do jogador
+    local startX = tileSize * posX
+    local startY = tileSize * posY
+    
+    -- carregando o jogador principal
+    player = Player.load(world, startX, startY, 3)
+    player.pendingRespawn = false
+
+    -- carregando os inimigos (dinossauros)
+    Enemies.load(world)
+
+    -- Carregando colisões
+    walls = Collision.loadWalls(world, game_map)
+    diamonds = Collision.loadDiamonds(world, game_map, "Diamonds", "Diamond")
+    pink_diamonds = Collision.loadDiamonds(world, game_map, "PinkDiamonds", "PinkDiamond")
+
+    print("Jogo iniciado com sucesso")
+
+    isTransitioning = false
+end
+
+function handleServerResponse(response)
+    for k, v in pairs(response) do
+            print(k, v)
+    end
+
+    -- Condicionais para tratar as respostas do servidor
+    if response.action == "initial_game" then
+        cleanup_map()
+        gameState = response.gameState
+        loadGame(
+            gameState.maps[gameState.current_map_index],
+            gameState.player_position.x,
+            gameState.player_position.y
+        )
+    elseif response.action == "blue_diamond_collision" then
+        gameState.total_blue_diamonds = response.blue_diamonds
+    elseif response.action == "pink_diamond_collision" then
+        gameState.total_pink_diamonds = response.pink_diamonds
+        -- aumentar a velocidade do jogador por 1,5 segundos
+        if response.speedBoost and player then
+            player.baseSpeed = player.baseSpeed or player.speed
+            local mult = response.speedBoost.multiplier or 1.0
+            player.speed = player.baseSpeed * mult
+            player.speedBoostTimer = response.speedBoost.duration or 0
+            player.speedBoostMultiplier = mult
+        end
+    elseif response.action == "next_map" then
+        startFade("out", function()
+            gameState = response.gameState
+            cleanup_map()
+            loadGame(
+                gameState.maps[gameState.current_map_index],
+                gameState.player_position.x,
+                gameState.player_position.y
+            )
+            startFade("in")
+        end)
+    elseif response.action == "change_current_screen" then
+        gameState.current_screen = response.current_screen
+        if response.prev_screen == "game_over" or response.prev_screen == "winner" then
+            -- resetar flags e solicitar o gameState inicial
+            isCollisionFreeze = false
+            collisionDelay = 0    
+            isGameOver = false
+
+            udp:send(json.encode({ action = "getInitialGameState" }) .. "\n")
+        end
+    elseif response.action == "winner" then
+        startFade("out", function()
+            gameState.current_screen = response.current_screen
+            startFade("in")
+        end)
+    elseif response.action == "enemy_collision" then
+        gameState.lives_number = response.remaining_lives
+        gameState.player_position = response.player_position
+    elseif response.action == "game_over" then
+        gameState.lives_number = response.remaining_lives
+        isCollisionFreeze = true
+        collisionDelay = 1.5
+        isGameOver = true
+    else
+        print("Ação desconhecida ou aguardando dados do servidor...")
+    end
+end
+
+function cleanup_map()
+    isTransitioning  = true
+
+    -- limpar as referencias dos colisores
+    if player then
+        if player.collider then
+            player.collider = nil
+        end
+        player = nil
+    end
+
+    if Enemies and Enemies.cleanup then
+        Enemies.cleanup()
+    end
+
+    if diamonds then
+        diamonds = {}
+    end
+    
+    if pink_diamonds then
+        pink_diamonds = {}
+    end
+    
+    if walls then
+        walls = {}
+    end
+    
+    if world then
+        world:destroy()
+        world = nil
+    end
+    
+    if game_map then
+        game_map = nil
+    end
+
+end
+
+function updateFade(dt)
+    if fade.direction == "out" then
+        fade.alpha = fade.alpha + dt * fade.speed
+        if fade.alpha >= 1 then
+            fade.alpha = 1
+            fade.direction = nil
+            if fade.onComplete then
+                fade.onComplete()
+                fade.onComplete = nil
+            end
+        end
+    elseif fade.direction == "in" then
+        fade.alpha = fade.alpha - dt * fade.speed
+        if fade.alpha <= 0 then
+            fade.alpha = 0
+            fade.direction = nil
+        end
+    end
+end
+
+function drawFade()
+    if fade.alpha > 0 then
+        love.graphics.setColor(0, 0, 0, fade.alpha)
+        love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+end
+
+function startFade(direction, onComplete)
+    fade.direction = direction
+    fade.onComplete = onComplete
+end

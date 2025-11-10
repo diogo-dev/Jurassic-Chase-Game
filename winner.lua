@@ -1,46 +1,48 @@
 local json = require "libraries/dkjson"
-local GameOver = {}
+local Winner = {}
 
 local function change_screen(screen, clientSocket)
     local message = {
         action = "change_current_screen",
-        prev_screen = "game_over",
+        prev_screen = "winner",
         current_screen = screen
     }
     clientSocket:send(json.encode(message) .. "\n")
 end
 
-function GameOver.load(clientSocket)
-    GameOver.backgroundImage = love.graphics.newImage("assets/gameOver.png")
-    GameOver.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 110)
-    GameOver.fontText = love.graphics.newFont(20)
-    GameOver.clientSocket = clientSocket
+function Winner.load(clientSocket) 
+    Winner.backgroundImage = love.graphics.newImage("assets/winner.png")
+    Winner.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 110)
+    Winner.fontText = love.graphics.newFont(20)
+    Winner.clientSocket = clientSocket
 
-    GameOver.button_back= {
+    Winner.button_back= {
         text = "Voltar ao menu",
         last = false,
         now = false,
     }
+
 end
 
-function GameOver.draw()
+
+function Winner.draw()
     local ww = love.graphics.getWidth()
     local wh = love.graphics.getHeight()
 
-    if GameOver.backgroundImage then
+    if Winner.backgroundImage then
         love.graphics.setColor(1, 1, 1, 1)
-        local iw, ih = GameOver.backgroundImage:getDimensions()
+        local iw, ih = Winner.backgroundImage:getDimensions()
         local x = (ww - iw) / 2
         local y = (wh - ih) / 2
-        love.graphics.draw(GameOver.backgroundImage, x, y)
+        love.graphics.draw(Winner.backgroundImage, x, y)
     end
 
     -- botão voltar
-    love.graphics.setFont(GameOver.fontText)
-    local button = GameOver.button_back
+    love.graphics.setFont(Winner.fontText)
+    local button = Winner.button_back
     local buttonText = button.text
-    local buttonW = GameOver.fontText:getWidth(buttonText)
-    local buttonH = GameOver.fontText:getHeight()
+    local buttonW = Winner.fontText:getWidth(buttonText)
+    local buttonH = Winner.fontText:getHeight()
     local bx = (ww - buttonW) * 0.5
     local by = wh - 120
 
@@ -54,7 +56,7 @@ function GameOver.draw()
     button.now = love.mouse.isDown(1)
 
     if button.now and not button.last and hot then
-        change_screen("menu", GameOver.clientSocket)
+        change_screen("menu", Winner.clientSocket)
     end
 
     if hot then
@@ -69,4 +71,5 @@ function GameOver.draw()
 
 end
 
-return GameOver
+return Winner
+

@@ -1,5 +1,5 @@
--- ...existing code...
 local Enemies = {}
+Enemies.list = {}
 local directions = {
     {x = 1, y = 0},   -- direita
     {x = -1, y = 0},  -- esquerda
@@ -21,7 +21,7 @@ end
 
 function Enemies.load(world)
     local tileSize = 32
-    local speed = 125 
+    local speed = 50 
     local width, height = 25, 28
 
     local minChange, maxChange = 2.5, 5.0
@@ -222,6 +222,19 @@ function Enemies.draw()
         local drawY = ey - (e.frameH * e.scale) / 2
         e.directionSprite:draw(e.spriteSheet, drawX, drawY, 0, e.scale, e.scale)
     end
+end
+
+function Enemies.cleanup()
+    -- Limpar referências aos colisores
+    for i, enemy in ipairs(Enemies.list) do
+        if enemy.collider then
+            enemy.collider = nil
+        end
+    end
+    
+    Enemies.list = {}
+    
+    print("Inimigos limpos")
 end
 
 return Enemies

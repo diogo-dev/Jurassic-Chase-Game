@@ -10,30 +10,89 @@ print("Servidor da biblioteca rodando na porta 12345...")
 -- Configuração inicial do estado do jogo
 local gameState = nil
 
-local function reset_game_state()
+local mapConfig = {
+    fase1 = {
+        blue = 168,
+        pink = 8,
+        posX = 8.2,
+        posY = 5
+    },
+    fase2 = {
+        blue = 174,
+        pink = 11,
+        posX = 8.3,
+        posY = 8.3
+    }
+}
+
+local function load_game_state()
     return {
         current_screen = "menu",
-        total_diamonds = 168,
-        total_pink_diamonds = 8,
+        load_next_map = false,
+        total_blue_diamonds = mapConfig.fase1.blue,
+        total_pink_diamonds = mapConfig.fase1.pink,
         lives_number = 3,
-        player_position = { x = 262.4, y = 160 },
+        player_position = { 
+            x = mapConfig.fase1.posX, 
+            y = mapConfig.fase1.posY 
+        },
         is_paused = false,
         player_speed = 120,
-        timer = 180
+        timer = 180,
+        maps = {"maps/fase1.lua", "maps/fase2.lua"},
+        current_map_index = 1
     }
 end
 
+local function update_game_state(params)
+    for key, value in pairs(params) do
+        if gameState[key] ~= nil then
+            gameState[key] = value
+        else
+            print("Aviso: '" .. key .. "' não é um atributo válido no gameState")
+        end
+    end 
+end
+
 local function diamondCollision(class)
-    -- Quando acontecer a colisão com o diamente rosa, aumentar a velocidade do jogador
     local response = {}
 
     if class == "Diamond" then
-        gameState.total_diamonds = gameState.total_diamonds - 1
-        response = { action = "diamond_collision", diamonds =  gameState.total_diamonds }
+        gameState.total_blue_diamonds = gameState.total_blue_diamonds - 1
+        response = { 
+            action = "blue_diamond_collision", 
+            blue_diamonds =  gameState.total_blue_diamonds, 
+        }
     elseif class == "PinkDiamond" then
         gameState.total_pink_diamonds = gameState.total_pink_diamonds - 1
         local speedBoost = { multiplier = 1.8, duration = 0.8 }
-        response = { action = "pink_diamond_collision", pink_diamonds =  gameState.total_pink_diamonds, speedBoost = speedBoost }
+        response = { 
+            action = "pink_diamond_collision", 
+            pink_diamonds =  gameState.total_pink_diamonds, 
+            speedBoost = speedBoost,
+        }
+    end
+
+    if gameState.total_blue_diamonds + gameState.total_pink_diamonds <= 0 then
+        if gameState.current_map_index == 1 then
+            update_game_state({
+                load_next_map = true,
+                total_blue_diamonds = mapConfig.fase2.blue,
+                total_pink_diamonds = mapConfig.fase2.pink,
+                timer = 180,
+                current_map_index = gameState.current_map_index + 1,
+                player_position = {
+                    x = mapConfig.fase2.posX,
+                    y = mapConfig.fase2.posY
+                }
+            })
+            response = { action = "next_map", gameState = gameState }
+        else
+            response = { action = "winner", current_screen = "winner"}
+        end
+        
+    else
+        gameState.load_next_map = false
     end
 
     return response
@@ -42,11 +101,29 @@ end
 local function dinoCollision()
     if gameState.lives_number == 1 then
         gameState.lives_number = gameState.lives_number - 1
-        response = { action = "game_over", remaining_lives = gameState.lives_number, current_screen = "game_over" }
+        response = { 
+            action = "game_over", 
+            remaining_lives = gameState.lives_number, 
+            current_screen = "game_over" 
+        }
     else
         gameState.lives_number = gameState.lives_number - 1
-        local player_position = { x = 262.4, y = 160 }
-        response = { action = "enemy_collision", remaining_lives = gameState.lives_number, player_position = player_position }
+
+        local posX, posY
+        if gameState.current_map_index == 1 then
+            posX = mapConfig.fase1.posX
+            posY = mapConfig.fase1.posY
+        else
+            posX = mapConfig.fase2.posX
+            posY = mapConfig.fase2.posY
+        end
+
+        local player_position = { x = posX, y = posY }
+        response = { 
+            action = "enemy_collision", 
+            remaining_lives = gameState.lives_number, 
+            player_position = player_position 
+        }
     end
 
     return response
@@ -54,14 +131,15 @@ end
 
 local function changeCurrentScreen(data)
 
-    if data.prev_screen == "game_over" and data.current_screen == "running" then
-        gameState = reset_game_state()
-        gameState.current_screen = "running"
-        return { action = "change_current_screen", gameState = gameState, prev_screen = "game_over" }
-    else
-        gameState.current_screen = data.current_screen
-        return { action = "change_current_screen", current_screen = gameState.current_screen }
-    end
+    local prev_screen = data.prev_screen or gameState.current_screen
+    local new_screen = data.current_screen
+
+    gameState.current_screen = new_screen
+    return { 
+        action = "change_current_screen", 
+        current_screen = new_screen,
+        prev_screen = prev_screen
+    }
 
 end
 
@@ -75,7 +153,7 @@ while true do
         local response = {}
 
         if data.action == "getInitialGameState" then
-            gameState = reset_game_state()
+            gameState = load_game_state()
             response = {action = "initial_game", gameState = gameState}
         elseif data.action == "collect_diamond" then
             response = diamondCollision(data.collisionClass)

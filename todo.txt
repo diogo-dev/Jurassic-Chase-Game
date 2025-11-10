@@ -1,0 +1,11 @@
+1 - Adicionar a lógica de sair da tela de game over para o menu e iniciar o jogo corretamente de novo
+
+2 - Adicionar a lógica das fases no jogo
+
+3 - modificar a movimentação dos vilões para a segunda fase e melhorar a movimentação para a primeira
+
+4 - tela de winner
+
+5 - modificar a movimentação do player
+
+6 - efeitos sonoros

@@ -32,7 +32,10 @@ function Buttons.load(clientSocket)
     table.insert(Buttons, new_button(
     "Começar jogo", 
     function() 
-        change_screen("running", clientSocket) 
+        startFade("out", function ()
+          change_screen("running", clientSocket) 
+          startFade("in")
+        end)
     end))
 
     table.insert(Buttons, new_button(
