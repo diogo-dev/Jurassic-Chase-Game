@@ -1,5 +1,6 @@
 local json = require "libraries/dkjson"
 local Player = require "player"
+local Audio = require "audio"
 
 local Collision = {}
 
@@ -66,6 +67,8 @@ end
 
 function Collision.handleDiamondCollision(player, collisionClass, layerName, diamondList, counter, gameMap, clientSocket)
     if player.collider:enter(collisionClass) then
+        Audio.playCollectDiamond()
+
         local collision_data = player.collider:getEnterCollisionData(collisionClass)
         local coin_collider = collision_data.collider
 
@@ -100,6 +103,8 @@ function Collision.handleEnemyPlayerCollision(player, clientSocket, world)
     if not player or not player.collider then return end
 
     if player.collider:enter('Enemy') then
+        -- toca o efeito sonoro de colisão
+        Audio.playEnemyHit()
         
         -- Avisa o servidor que houve colisão do player com um inimigo
         -- pcall envia requisições de forma segura

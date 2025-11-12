@@ -1,5 +1,7 @@
 local Player = {}
 
+local PLAYER_SPEED = 120
+
 function Player.load(world, startX, startY, lives)
     local frameW, frameH = 12, 18
     local scale = 1.6
@@ -11,7 +13,7 @@ function Player.load(world, startX, startY, lives)
     collider:setFixedRotation(true)
     collider:setCollisionClass('Player')
     local x, y = collider:getPosition()
-    local speed = 120
+    local speed = PLAYER_SPEED
     local current_lives = lives
     local spriteSheet = love.graphics.newImage('sprites/player-sheet.png')
     local grid = anim8.newGrid(frameW, frameH, spriteSheet:getWidth(), spriteSheet:getHeight())

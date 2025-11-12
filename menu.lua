@@ -1,4 +1,5 @@
 local json = require "libraries/dkjson"
+local Audio = require "audio"
 
 BUTTON_HEIGHT = 64
 
@@ -32,6 +33,7 @@ function Buttons.load(clientSocket)
     table.insert(Buttons, new_button(
     "Começar jogo", 
     function() 
+        Audio.playInitiateGame()
         startFade("out", function ()
           change_screen("running", clientSocket) 
           startFade("in")
@@ -41,12 +43,14 @@ function Buttons.load(clientSocket)
     table.insert(Buttons, new_button(
     "Como Jogar", 
     function() 
+        Audio.playInitiateGame()
         change_screen("how_to_play", clientSocket) 
     end))
 
     table.insert(Buttons, new_button(
     "Sair", 
     function() 
+        Audio.playInitiateGame()
         love.event.quit()
     end))
 

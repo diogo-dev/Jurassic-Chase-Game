@@ -11,6 +11,7 @@ local Menu = require "menu"
 local HowToPlay = require "how_to_play"
 local GameOver = require "game_over"
 local Winner = require "winner"
+local Audio = require "audio"
 
 -- importando bibliotecas para rede
 local socket = require "socket"
@@ -48,6 +49,9 @@ function love.load()
 
     local initialRequest = {action = "getInitialGameState"}
     udp:send(json.encode(initialRequest) .. "\n")
+
+    --carregando os efeiros sonoros do jogo
+    Audio.load()
 
     -- carregando as possíveis telas do jogo
     Menu.load(udp)
@@ -98,14 +102,15 @@ function love.update(dt)
     Player.updateMovement(player)
     -- Mantendo o jogador dentro dos limites da tela
     Player.playerWindowLimits(player, mapWidth, mapHeight)
-    -- Atualizando os inimingos
-    Enemies.update(dt)
-    -- Atualizado o mundo físico do jogo
-    world:update(dt)
     -- Sincronizando a posição do jogador com o seu colisor 
     player.x, player.y = player.collider:getPosition()
     -- Atualizando a animação do sprite do jogador
     player.directionSprite:update(dt) 
+    -- Atualizando os inimingos
+    local playerPos = { x = player.x, y = player.y }
+    Enemies.update(dt, playerPos)
+    -- Atualizado o mundo físico do jogo
+    world:update(dt)
     -- Atualizando o mapa 
     game_map:update(dt) 
 
@@ -143,9 +148,7 @@ function love.draw()
 end
 
 function drawGame(game_map, player, world, gameState)
-    -- Desenhando o mapa (now inside the testeMap.lua)
     game_map:draw()
-    --drawHUD(gameState)
 
     -- Desenhando o jogador
     -- Parâmetros: imagem, posição x, posição y, rotação, escala x, escala y, offset x, offset y
@@ -160,15 +163,19 @@ end
 
 function love.keypressed(key)
     if key == "e" and gameState.current_screen == "running" then
+        Audio.playInitiateGame()
         isPaused = not isPaused
     end
 
-    -- Adicionar música de fundo depois
-    -- if gameState.isPaused then
-    --     backgroundMusic:pause()
-    -- else
-    --     backgroundMusic:play()
-    -- end
+    if isPaused and gameState.current_map_index == 1 then
+        Audio.pauseMusic()
+    elseif isPaused and gameState.current_map_index == 2 then
+        Audio.pauseMusic2()
+    elseif not isPaused and gameState.current_map_index == 1 then
+        Audio.resumeMusic()
+    else
+        Audio.resumeMusic2()
+    end
 end
 
 function pausedGameDraw()
@@ -281,12 +288,12 @@ function loadGame(map, posX, posY)
     game_map = sti(map)
     world = wf.newWorld(0, 0)
     
-    -- filtro para pixel art (mudança de scala não afeta a qualidade das sprites)
+    -- filtro para pixel art (mudança de escala não afeta a qualidade das sprites)
     love.graphics.setDefaultFilter('nearest', 'nearest')
 
     -- classes de colisão
     world:addCollisionClass('Player')
-    world:addCollisionClass('Enemy')
+    world:addCollisionClass('Enemy', {ignores = {'Enemy'}})
     world:addCollisionClass('Diamond', {ignores = {'Enemy'}})
     world:addCollisionClass('PinkDiamond', {ignores = {'Enemy'}})
     world:addCollisionClass('Wall')
@@ -304,7 +311,7 @@ function loadGame(map, posX, posY)
     player.pendingRespawn = false
 
     -- carregando os inimigos (dinossauros)
-    Enemies.load(world)
+    Enemies.load(world, gameState.current_map_index)
 
     -- Carregando colisões
     walls = Collision.loadWalls(world, game_map)
@@ -323,6 +330,8 @@ function handleServerResponse(response)
 
     -- Condicionais para tratar as respostas do servidor
     if response.action == "initial_game" then
+        Audio.playInitiateGame()
+        Audio.playMusic()
         cleanup_map()
         gameState = response.gameState
         loadGame(
@@ -343,6 +352,8 @@ function handleServerResponse(response)
             player.speedBoostMultiplier = mult
         end
     elseif response.action == "next_map" then
+        Audio.stopMusic()
+        Audio.playMusic2()
         startFade("out", function()
             gameState = response.gameState
             cleanup_map()
@@ -364,6 +375,7 @@ function handleServerResponse(response)
             udp:send(json.encode({ action = "getInitialGameState" }) .. "\n")
         end
     elseif response.action == "winner" then
+        Audio.stopMusic2()
         startFade("out", function()
             gameState.current_screen = response.current_screen
             startFade("in")
@@ -372,6 +384,8 @@ function handleServerResponse(response)
         gameState.lives_number = response.remaining_lives
         gameState.player_position = response.player_position
     elseif response.action == "game_over" then
+        Audio.stopMusic()
+        Audio.stopMusic2()
         gameState.lives_number = response.remaining_lives
         isCollisionFreeze = true
         collisionDelay = 1.5

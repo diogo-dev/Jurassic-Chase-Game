@@ -18,7 +18,7 @@ local mapConfig = {
         posY = 5
     },
     fase2 = {
-        blue = 174,
+        blue = 170,
         pink = 11,
         posX = 8.3,
         posY = 8.3
@@ -36,9 +36,8 @@ local function load_game_state()
             x = mapConfig.fase1.posX, 
             y = mapConfig.fase1.posY 
         },
-        is_paused = false,
         player_speed = 120,
-        timer = 180,
+        timer = 150,
         maps = {"maps/fase1.lua", "maps/fase2.lua"},
         current_map_index = 1
     }

@@ -1,5 +1,7 @@
 local Enemies = {}
 Enemies.list = {}
+
+-- Direções possíveis (vetores normalizados)
 local directions = {
     {x = 1, y = 0},   -- direita
     {x = -1, y = 0},  -- esquerda
@@ -7,24 +9,146 @@ local directions = {
     {x = 0, y = -1}   -- cima
 }
 
-local function pixelToTile(px, py, tileSize)
-    local tx = math.floor(px / tileSize) + 1
-    local ty = math.floor(py / tileSize) + 1
-    return tx, ty
+-- Configurações
+local DIRECTION_CHECK_DISTANCE = 64
+local DECISION_INTERVAL_RANDOM = 0.6
+local DECISION_INTERVAL_CHASE = 0.5
+local ENEMY_SPEED = 125
+local CHASE_SPEED = 145
+local currentMap = 1
+
+local function isDirectionFree(enemy, direction, world)
+    local ex, ey = enemy.collider:getPosition()
+    local checkDist = DIRECTION_CHECK_DISTANCE
+    
+    -- Ponto final do raycast
+    local endX = ex + direction.x * checkDist
+    local endY = ey + direction.y * checkDist
+    
+    -- Verifica se há colisores na área de destino
+    local colliders = world:queryCircleArea(endX, endY, 10, {'Wall', 'Walls'})
+    
+    return #colliders == 0
 end
 
-local function tileToPixelCenter(tx, ty, tileSize)
-    local px = (tx - 1) * tileSize + tileSize / 2
-    local py = (ty - 1) * tileSize + tileSize / 2
-    return px, py
+local function getAvailableDirections(enemy, world)
+    local available = {}
+    
+    for i, dir in ipairs(directions) do
+        if isDirectionFree(enemy, dir, world) then
+            table.insert(available, {index = i, vector = dir})
+        end
+    end
+    
+    return available
 end
 
-function Enemies.load(world)
+local function pickSmartDirection(enemy, world, bounds)
+    local available = getAvailableDirections(enemy, world)
+    
+    if #available == 0 then
+        -- Se não há direções livres, para temporariamente
+        enemy.dir = {x = 0, y = 0}
+        enemy.stuck = true
+        return
+    end
+    
+    -- Remove a direção oposta à atual para evitar "vai e volta"
+    local currentDir = enemy.dir
+    local filtered = {}
+    
+    for _, dirInfo in ipairs(available) do
+        local isOpposite = (dirInfo.vector.x == -currentDir.x and dirInfo.vector.y == -currentDir.y)
+        -- Só remove a oposta se houver outras opções
+        if not isOpposite or #available == 1 then
+            -- Verifica bounds do mapa
+            if bounds then
+                local ex, ey = enemy.collider:getPosition()
+                local nextX = ex + dirInfo.vector.x * 10
+                local nextY = ey + dirInfo.vector.y * 10
+                if nextX >= bounds.left and nextX <= bounds.right and 
+                   nextY >= bounds.top and nextY <= bounds.bottom then
+                    table.insert(filtered, dirInfo)
+                end
+            else
+                table.insert(filtered, dirInfo)
+            end
+        end
+    end
+    
+    -- Se filtrou tudo, usa as direções disponíveis originais
+    if #filtered == 0 then
+        filtered = available
+    end
+    
+    if #filtered > 0 then
+        local chosen = filtered[love.math.random(1, #filtered)]
+        enemy.dirIndex = chosen.index
+        enemy.dir = chosen.vector
+        enemy.stuck = false
+    end
+end
+
+local function getDirectionTowardsPlayer(enemy, playerPos, world)
+    local ex, ey = enemy.collider:getPosition()
+    local px, py = playerPos.x, playerPos.y
+    
+    -- Calcula diferenças
+    local dx = px - ex
+    local dy = py - ey
+    
+    -- Obtém direções disponíveis
+    local available = getAvailableDirections(enemy, world)
+    
+    if #available == 0 then
+        return {x = 0, y = 0}
+    end
+    
+    -- Pontuação para cada direção baseada em quão perto leva do player
+    local scored = {}
+    for _, dirInfo in ipairs(available) do
+        local dir = dirInfo.vector
+        -- Produto escalar: quanto maior, mais alinhado com a direção do player
+        local score = (dir.x * dx + dir.y * dy)
+        table.insert(scored, {dirInfo = dirInfo, score = score})
+    end
+    
+    -- Ordena por pontuação (maior = melhor)
+    table.sort(scored, function(a, b) return a.score > b.score end)
+    
+    -- Sempre escolhe a melhor direção (mais próxima do player)
+    local chosen = scored[1].dirInfo
+    
+    return chosen.vector, chosen.index
+end
+
+-- Movimentação de perseguição
+local function pickChaseDirection(enemy, playerPos, world, bounds)
+    if not playerPos then
+        -- Se não tem player, comporta-se aleatoriamente
+        pickSmartDirection(enemy, world, bounds)
+        return
+    end
+    
+    local newDir, newIndex = getDirectionTowardsPlayer(enemy, playerPos, world)
+    
+    if newDir and (newDir.x ~= 0 or newDir.y ~= 0) then
+        enemy.dir = newDir
+        if newIndex then
+            enemy.dirIndex = newIndex
+        end
+        enemy.stuck = false
+    else
+        enemy.dir = {x = 0, y = 0}
+        enemy.stuck = true
+    end
+end
+
+function Enemies.load(world, mapNumber)
     local tileSize = 32
-    local speed = 50 
     local width, height = 25, 28
 
-    local minChange, maxChange = 2.5, 5.0
+    currentMap = mapNumber   
 
     -- posições iniciais nas "pontas" do mapa (calculadas a partir do game_map)
     local mapW, mapH = 17, 18 
@@ -65,6 +189,20 @@ function Enemies.load(world)
 
         local dirIndex = math.random(#directions)
 
+        -- definindo compotamentos padrão
+        local speed = ENEMY_SPEED
+        local decisionInterval = DECISION_INTERVAL_RANDOM
+
+        -- na fase 2, dois inimigos serão bem rápidos
+        if currentMap == 2 then
+            if i <= 2 then
+                speed = CHASE_SPEED
+                decisionInterval = DECISION_INTERVAL_CHASE
+            end
+        else
+            print("Inimigo " .. i .. " configurado como ALEATÓRIO (fase 1)")
+        end
+
         dinos[i] = {
             collider = collider,
             x = collider:getX(),
@@ -75,15 +213,16 @@ function Enemies.load(world)
             spriteSheet = spriteSheet,
             grid = grid,
             directionSprite = moveAnim,
-            timer = math.random() * (maxChange - minChange) + minChange,
-            minChange = minChange,
-            maxChange = maxChange,
-            targetTile = nil,
+            timer = decisionInterval,
+            decisionInterval = decisionInterval,
             dirIndex = dirIndex,
             dir = directions[dirIndex],
             frameW = frameW,
             frameH = frameH,
-            scale = scale
+            scale = scale,
+            stuck = false,
+            stuckTimer = 0,
+            world = world,
         }
     end
 
@@ -91,7 +230,8 @@ function Enemies.load(world)
 
     -- debug: imprime conteúdo legível
     for i, d in ipairs(dinos) do
-        print("dino", i, "collider:", tostring(d.collider), "x,y:", d.x, d.y, "sprite:", tostring(d.spriteSheet))
+        print(string.format("Dino %d: collider=%s, pos=(%.1f,%.1f)", 
+            i, tostring(d.collider), d.x, d.y))
     end
     print(#dinos, "dinos carregados")
 end
@@ -100,30 +240,6 @@ local function clamp(v, a, b)
     if v < a then return a end
     if v > b then return b end
     return v
-end
-
-local function pickNewDirection(e, bounds)
-    -- escolhe uma direção aleatória diferente da atual e que não imediatamente saia do mapa (se bounds fornecido)
-    local tries = 0
-    local newIndex = e.dirIndex
-    while tries < 20 do
-        newIndex = math.random(#directions)
-        if newIndex ~= e.dirIndex then
-            local cand = directions[newIndex]
-            if bounds then
-                local nextX = e.x + cand.x * 1 -- unidade pequena para teste
-                local nextY = e.y + cand.y * 1
-                if nextX >= bounds.left and nextX <= bounds.right and nextY >= bounds.top and nextY <= bounds.bottom then
-                    break
-                end
-            else
-                break
-            end
-        end
-        tries = tries + 1
-    end
-    e.dirIndex = newIndex
-    e.dir = directions[e.dirIndex]
 end
 
 function Enemies.update(dt)
@@ -138,10 +254,9 @@ function Enemies.update(dt)
     local mapPixelH = mapH * tileSize
 
     for _, e in ipairs(Enemies.list) do
-        -- decrementa timer e troca de direção se expirar
         e.timer = e.timer - dt
+        
         if e.timer <= 0 then
-            -- calcula bounds em pixels para evitar escolher direção que saia do mapa
             local halfSpriteW = (e.frameW * e.scale) / 2
             local halfSpriteH = (e.frameH * e.scale) / 2
             local halfColliderW = e.width / 2
@@ -152,64 +267,76 @@ function Enemies.update(dt)
             local right = mapPixelW - halfW
             local top = halfH
             local bottom = mapPixelH - halfH
-
-            pickNewDirection(e, {left = left, right = right, top = top, bottom = bottom})
-            -- reset timer (aleatório dentro do intervalo guardado)
-            e.timer = math.random() * (e.maxChange - e.minChange) + e.minChange
+            
+            local bounds = {left = left, right = right, top = top, bottom = bottom}
+            pickSmartDirection(e, e.world, bounds)
+            e.timer = e.decisionInterval
         end
 
-        -- obtenha posição atual
-        local ex, ey = e.collider:getPosition()
+        if e.stuck then
+            e.stuckTimer = e.stuckTimer + dt
+            if e.stuckTimer > 0.15 then
+                e.stuckTimer = 0
+                local halfW = e.width / 2
+                local halfH = e.height / 2
+                local left = halfW
+                local right = mapPixelW - halfW
+                local top = halfH
+                local bottom = mapPixelH - halfH
+                local bounds = {left = left, right = right, top = top, bottom = bottom}
+                
+                pickSmartDirection(e, e.world, bounds)
+            end
+        end
 
-        -- calcule as metades visíveis (considera sprite escalada e colisor)
+        local ex, ey = e.collider:getPosition()
         local halfSpriteW = (e.frameW * e.scale) / 2
         local halfSpriteH = (e.frameH * e.scale) / 2
         local halfColliderW = e.width / 2
         local halfColliderH = e.height / 2
         local halfW = math.max(halfSpriteW, halfColliderW)
         local halfH = math.max(halfSpriteH, halfColliderH)
-
-        -- bounds em pixels para o centro do colisor
         local left = halfW
         local right = mapPixelW - halfW
         local top = halfH
         local bottom = mapPixelH - halfH
 
-        -- prever próxima posição simples
+        -- Prever próxima posição
         local nextX = ex + e.dir.x * e.speed * dt
         local nextY = ey + e.dir.y * e.speed * dt
 
-        -- se a próxima posição ultrapassar os limites em pixels, trocar de direção
+        -- Verificar limites do mapa
         if nextX < left or nextX > right or nextY < top or nextY > bottom then
             e.collider:setLinearVelocity(0, 0)
-            e.x, e.y = e.collider:getPosition()
-            pickNewDirection(e, {left = left, right = right, top = top, bottom = bottom})
-            -- reset timer para evitar troca imediata novamente
-            e.timer = math.random() * (e.maxChange - e.minChange) + e.minChange
+            e.stuck = true
+            local bounds = {left = left, right = right, top = top, bottom = bottom}
+            
+            pickSmartDirection(e, e.world, bounds)
+            e.timer = e.decisionInterval
         else
-            -- tenta mover: aplica velocidade na direção cardinal
             e.collider:setLinearVelocity(e.dir.x * e.speed, e.dir.y * e.speed)
 
-            -- se entrou em colisão com parede ou outro inimigo, volta para o centro do tile atual e troca direção
-            if e.collider:enter('Wall') or e.collider:enter('Walls') or e.collider:enter('Enemy') then
+            if e.collider:enter('Wall') then
                 e.collider:setLinearVelocity(0, 0)
-                -- snap para centro do tile atual para evitar ficar preso
-                local curTx, curTy = pixelToTile(ex, ey, tileSize)
-                local cx, cy = tileToPixelCenter(curTx, curTy, tileSize)
-                -- garanta que o centro stay dentro dos bounds
-                cx = clamp(cx, left, right)
-                cy = clamp(cy, top, bottom)
-                e.collider:setPosition(cx, cy)
-                e.x, e.y = cx, cy
-                pickNewDirection(e, {left = left, right = right, top = top, bottom = bottom})
-                -- reset timer para evitar troca imediata
-                e.timer = math.random() * (e.maxChange - e.minChange) + e.minChange
+                e.stuck = true
+                
+                local curTileX = math.floor(ex / tileSize)
+                local curTileY = math.floor(ey / tileSize)
+                local centerX = curTileX * tileSize + tileSize / 2
+                local centerY = curTileY * tileSize + tileSize / 2
+                
+                centerX = clamp(centerX, left, right)
+                centerY = clamp(centerY, top, bottom)
+                e.collider:setPosition(centerX, centerY)
+                
+                local bounds = {left = left, right = right, top = top, bottom = bottom}
+                pickSmartDirection(e, e.world, bounds)
+                e.timer = e.decisionInterval
             else
-                -- atualizar posição cache
                 e.x, e.y = e.collider:getPosition()
+                e.stuck = false
             end
         end
-
         e.directionSprite:update(dt)
     end
 end
