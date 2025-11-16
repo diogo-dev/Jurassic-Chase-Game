@@ -9,6 +9,7 @@ local Enemies = require "enemies"
 local Collision = require "collision"
 local Menu = require "menu"
 local HowToPlay = require "how_to_play"
+local About = require "about"
 local GameOver = require "game_over"
 local Winner = require "winner"
 local Audio = require "audio"
@@ -19,6 +20,7 @@ local json = require "libraries/dkjson"
 local udp
 
 -- variáveis globais do jogo
+currentScreen = "menu"
 isPaused = false
 isTransitioning = false
 isCollisionFreeze = false
@@ -47,17 +49,15 @@ function love.load()
     udp:settimeout(0)
     udp:setpeername("127.0.0.1", 12345)
 
-    local initialRequest = {action = "getInitialGameState"}
-    udp:send(json.encode(initialRequest) .. "\n")
-
     --carregando os efeiros sonoros do jogo
     Audio.load()
 
     -- carregando as possíveis telas do jogo
     Menu.load(udp)
-    HowToPlay.load(udp)
-    GameOver.load(udp)
-    Winner.load(udp)
+    HowToPlay.load()
+    About.load()
+    GameOver.load()
+    Winner.load()
 end
 
 function love.update(dt)
@@ -66,6 +66,7 @@ function love.update(dt)
     if isPaused then return end
 
     if isTransitioning then return end
+
 
     -- Recebendo dados do servidor
     local data = udp:receive()
@@ -82,6 +83,8 @@ function love.update(dt)
 
         if isTransitioning then return end
     end
+
+    if currentScreen ~= "running" then return end
 
     if not world or not game_map or not player then
         return
@@ -127,17 +130,21 @@ function love.draw()
         return
     end
 
-    if gameState and gameState.current_screen == "menu" then
+    if currentScreen == "menu" then
         Menu.draw()
-    elseif gameState and gameState.current_screen == "how_to_play" then
+    elseif currentScreen == "how_to_play" then
         HowToPlay.draw()
-    elseif gameState and gameState.current_screen == "game_over" then
+    elseif currentScreen == "about" then
+        About.draw()
+    elseif currentScreen == "game_over" then
         GameOver.draw()
-    elseif gameState and gameState.current_screen == "winner" then
+    elseif  currentScreen == "winner" then
         Winner.draw()
-    else
+    elseif currentScreen == "running" then
         drawGame(game_map, player, world, gameState)
         drawHUD(gameState, 50)
+    else
+        Menu.draw()
     end
 
     if isPaused then
@@ -148,6 +155,10 @@ function love.draw()
 end
 
 function drawGame(game_map, player, world, gameState)
+    if not game_map or not player then
+        return
+    end
+
     game_map:draw()
 
     -- Desenhando o jogador
@@ -162,7 +173,7 @@ function drawGame(game_map, player, world, gameState)
 end
 
 function love.keypressed(key)
-    if key == "e" and gameState.current_screen == "running" then
+    if key == "e" and currentScreen == "running" then
         Audio.playInitiateGame()
         isPaused = not isPaused
     end
@@ -243,13 +254,12 @@ function updatePlayerSpeedBoost(player, dt)
 end
 
 function updateGameTimer(gameState, dt)
-    if gameState and gameState.current_screen == "running" and not isPaused then
+    if gameState and currentScreen == "running" and not isPaused then
         if gameState.timer > 0 then
             gameState.timer = gameState.timer - dt
         else
             gameState.timer = 0
-            -- O tempo acabou: jogador perde
-            gameState.current_screen = "game_over"
+            currentScreen = "game_over"
         end
     end
 end
@@ -277,7 +287,9 @@ function updateCollisionFreeze(gameState, dt)
         end
     elseif not isCollisionFreeze and isGameOver then
         isGameOver = false
-        gameState.current_screen = "game_over"
+        cleanup_map()
+        currentScreen = "game_over"
+        return true
     end
 
     return false -- não está congelado, pode continuar o update
@@ -319,8 +331,6 @@ function loadGame(map, posX, posY)
     pink_diamonds = Collision.loadDiamonds(world, game_map, "PinkDiamonds", "PinkDiamond")
 
     print("Jogo iniciado com sucesso")
-
-    isTransitioning = false
 end
 
 function handleServerResponse(response)
@@ -332,6 +342,7 @@ function handleServerResponse(response)
     if response.action == "initial_game" then
         Audio.playInitiateGame()
         Audio.playMusic()
+        isTransitioning = true
         cleanup_map()
         gameState = response.gameState
         loadGame(
@@ -339,6 +350,7 @@ function handleServerResponse(response)
             gameState.player_position.x,
             gameState.player_position.y
         )
+        isTransitioning = false
     elseif response.action == "blue_diamond_collision" then
         gameState.total_blue_diamonds = response.blue_diamonds
     elseif response.action == "pink_diamond_collision" then
@@ -356,6 +368,7 @@ function handleServerResponse(response)
         Audio.playMusic2()
         startFade("out", function()
             gameState = response.gameState
+            isTransitioning = true
             cleanup_map()
             loadGame(
                 gameState.maps[gameState.current_map_index],
@@ -363,21 +376,14 @@ function handleServerResponse(response)
                 gameState.player_position.y
             )
             startFade("in")
+            isTransitioning = false
         end)
-    elseif response.action == "change_current_screen" then
-        gameState.current_screen = response.current_screen
-        if response.prev_screen == "game_over" or response.prev_screen == "winner" then
-            -- resetar flags e solicitar o gameState inicial
-            isCollisionFreeze = false
-            collisionDelay = 0    
-            isGameOver = false
-
-            udp:send(json.encode({ action = "getInitialGameState" }) .. "\n")
-        end
     elseif response.action == "winner" then
         Audio.stopMusic2()
+        waitingMode = true
         startFade("out", function()
-            gameState.current_screen = response.current_screen
+            cleanup_map()
+            currentScreen = response.current_screen
             startFade("in")
         end)
     elseif response.action == "enemy_collision" then
@@ -386,9 +392,8 @@ function handleServerResponse(response)
     elseif response.action == "game_over" then
         Audio.stopMusic()
         Audio.stopMusic2()
-        gameState.lives_number = response.remaining_lives
         isCollisionFreeze = true
-        collisionDelay = 1.5
+        collisionDelay = 1
         isGameOver = true
     else
         print("Ação desconhecida ou aguardando dados do servidor...")
@@ -396,8 +401,6 @@ function handleServerResponse(response)
 end
 
 function cleanup_map()
-    isTransitioning  = true
-
     -- limpar as referencias dos colisores
     if player then
         if player.collider then

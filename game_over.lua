@@ -1,20 +1,10 @@
 local json = require "libraries/dkjson"
 local GameOver = {}
 
-local function change_screen(screen, clientSocket)
-    local message = {
-        action = "change_current_screen",
-        prev_screen = "game_over",
-        current_screen = screen
-    }
-    clientSocket:send(json.encode(message) .. "\n")
-end
-
-function GameOver.load(clientSocket)
+function GameOver.load()
     GameOver.backgroundImage = love.graphics.newImage("assets/gameOver.png")
     GameOver.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 110)
     GameOver.fontText = love.graphics.newFont(20)
-    GameOver.clientSocket = clientSocket
 
     GameOver.button_back= {
         text = "Voltar ao menu",
@@ -54,7 +44,7 @@ function GameOver.draw()
     button.now = love.mouse.isDown(1)
 
     if button.now and not button.last and hot then
-        change_screen("menu", GameOver.clientSocket)
+        currentScreen =  "menu"
     end
 
     if hot then

@@ -27,7 +27,6 @@ local mapConfig = {
 
 local function load_game_state()
     return {
-        current_screen = "menu",
         load_next_map = false,
         total_blue_diamonds = mapConfig.fase1.blue,
         total_pink_diamonds = mapConfig.fase1.pink,
@@ -37,7 +36,7 @@ local function load_game_state()
             y = mapConfig.fase1.posY 
         },
         player_speed = 120,
-        timer = 150,
+        timer = 120,
         maps = {"maps/fase1.lua", "maps/fase2.lua"},
         current_map_index = 1
     }
@@ -78,7 +77,7 @@ local function diamondCollision(class)
                 load_next_map = true,
                 total_blue_diamonds = mapConfig.fase2.blue,
                 total_pink_diamonds = mapConfig.fase2.pink,
-                timer = 180,
+                timer = 120,
                 current_map_index = gameState.current_map_index + 1,
                 player_position = {
                     x = mapConfig.fase2.posX,
@@ -101,9 +100,7 @@ local function dinoCollision()
     if gameState.lives_number == 1 then
         gameState.lives_number = gameState.lives_number - 1
         response = { 
-            action = "game_over", 
-            remaining_lives = gameState.lives_number, 
-            current_screen = "game_over" 
+            action = "game_over"
         }
     else
         gameState.lives_number = gameState.lives_number - 1
@@ -128,20 +125,6 @@ local function dinoCollision()
     return response
 end
 
-local function changeCurrentScreen(data)
-
-    local prev_screen = data.prev_screen or gameState.current_screen
-    local new_screen = data.current_screen
-
-    gameState.current_screen = new_screen
-    return { 
-        action = "change_current_screen", 
-        current_screen = new_screen,
-        prev_screen = prev_screen
-    }
-
-end
-
 while true do
     local data, ip, port = udp:receivefrom()
     if data then
@@ -156,8 +139,6 @@ while true do
             response = {action = "initial_game", gameState = gameState}
         elseif data.action == "collect_diamond" then
             response = diamondCollision(data.collisionClass)
-        elseif data.action == "change_current_screen" then
-            response = changeCurrentScreen(data)
         elseif data.action == "enemy_collision" then
             response = dinoCollision()
         else

@@ -1,3 +1,3 @@
-3 - modificar a movimentação dos vilões para a segunda fase e melhorar a movimentação para a primeira
+6 - carregar o jogo somente quando iniciar o jogo
 
-6 - efeitos sonoros: ok
+7 - 3min fase 2h

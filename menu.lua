@@ -15,16 +15,6 @@ end
 local Buttons = {}
 local font = nil
 
-local function change_screen(screen, clientSocket)
-    -- informar ao servidor a mudança de tela
-    local message = {
-        action = "change_current_screen",
-        prev_screen = "menu",
-        current_screen = screen
-    }
-    clientSocket:send(json.encode(message) .. "\n")
-end
-
 function Buttons.load(clientSocket)
     font = love.graphics.setNewFont(23)
     title_font = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 70)
@@ -32,10 +22,12 @@ function Buttons.load(clientSocket)
 
     table.insert(Buttons, new_button(
     "Começar jogo", 
-    function() 
+    function()
+        -- carregar jogo aqui
+        clientSocket:send(json.encode({action = "getInitialGameState"}) .. "\n") 
         Audio.playInitiateGame()
         startFade("out", function ()
-          change_screen("running", clientSocket) 
+          currentScreen = "running"
           startFade("in")
         end)
     end))
@@ -44,13 +36,19 @@ function Buttons.load(clientSocket)
     "Como Jogar", 
     function() 
         Audio.playInitiateGame()
-        change_screen("how_to_play", clientSocket) 
+        currentScreen = "how_to_play"
+    end))
+
+    table.insert(Buttons, new_button(
+    "Sobre", 
+    function() 
+        Audio.playInitiateGame()
+        currentScreen = "about"
     end))
 
     table.insert(Buttons, new_button(
     "Sair", 
     function() 
-        Audio.playInitiateGame()
         love.event.quit()
     end))
 

@@ -13,8 +13,8 @@ local directions = {
 local DIRECTION_CHECK_DISTANCE = 64
 local DECISION_INTERVAL_RANDOM = 0.6
 local DECISION_INTERVAL_CHASE = 0.5
-local ENEMY_SPEED = 125
-local CHASE_SPEED = 145
+local ENEMY_SPEED = 121
+local CHASE_SPEED = 140
 local currentMap = 1
 
 local function isDirectionFree(enemy, direction, world)

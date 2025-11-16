@@ -1,20 +1,11 @@
 local json = require "libraries/dkjson"
 local HowToPlay = {}
 
-local function change_screen(screen, clientSocket)
-    local message = {
-        action = "change_current_screen",
-        current_screen = screen
-    }
-    clientSocket:send(json.encode(message) .. "\n")
-end
-
-function HowToPlay.load(clientSocket)
+function HowToPlay.load()
     HowToPlay.backgroundImage = love.graphics.newImage("assets/instructions.png")
 
     HowToPlay.fontTitle = love.graphics.newFont("assets/fonts/Chicago_Athletic.ttf", 90)
     HowToPlay.fontText = love.graphics.newFont(20)
-    HowToPlay.clientSocket = clientSocket
 
     HowToPlay.button_back= {
         text = "Voltar ao Menu",
@@ -55,7 +46,7 @@ function HowToPlay.draw()
     button.now = love.mouse.isDown(1)
 
     if button.now and not button.last and hot then
-        change_screen("menu", HowToPlay.clientSocket)
+        currentScreen = "menu"
     end
 
     if hot then
